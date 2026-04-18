@@ -45,7 +45,29 @@ try {
     exit 1
 }
 
-# 4. 创建目录
+# 4. 检测 + 安装 psmux (Windows 原生 tmux 兼容,提供 tmux.exe)
+if (Get-Command tmux -ErrorAction SilentlyContinue) {
+    Write-Success "tmux/psmux 已安装"
+} else {
+    Write-Info "安装 psmux (Windows 原生 tmux,支持 session 持久化 + 多客户端)..."
+    try {
+        winget install --id psmux.psmux --accept-source-agreements --accept-package-agreements --silent 2>$null
+        # PATH 更新可能要重启 shell 才生效,本次 session 里手动 refresh
+        $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+        if (Get-Command tmux -ErrorAction SilentlyContinue) {
+            Write-Success "psmux 安装完成"
+        } else {
+            Write-Warn "psmux 装了但 PATH 还没生效,重启 PowerShell 后再跑 aiterminal"
+        }
+    } catch {
+        Write-Err "psmux 安装失败: $_"
+        Write-Host "  手动装: winget install psmux / scoop install psmux / cargo install psmux" -ForegroundColor Yellow
+        Write-Host "  然后重跑本安装脚本"
+        exit 1
+    }
+}
+
+# 5. 创建目录
 New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
 New-Item -ItemType Directory -Force -Path $PkgDir | Out-Null
 
