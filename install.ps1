@@ -54,49 +54,61 @@ if (Get-Command tmux -ErrorAction SilentlyContinue) {
 } else {
     Write-Info "安装 psmux (Windows 原生 tmux,支持 session 持久化 + 多客户端)..."
     $installed = $false
-    # 尝试 1: winget (最标准)
+    # 优先从 GitHub Releases 下载 binary (零权限,不会弹 UAC)
     try {
-        winget install -e --id marlocarlo.psmux --accept-source-agreements --accept-package-agreements --silent 2>&1 | Out-Null
-        $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
-        if (Get-Command tmux -ErrorAction SilentlyContinue) { $installed = $true; Write-Success "psmux 装好了 (winget)" }
-    } catch {}
-    # 尝试 2: scoop
-    if (-not $installed -and (Get-Command scoop -ErrorAction SilentlyContinue)) {
-        try {
-            scoop install psmux 2>&1 | Out-Null
-            if (Get-Command tmux -ErrorAction SilentlyContinue) { $installed = $true; Write-Success "psmux 装好了 (scoop)" }
-        } catch {}
-    }
-    # 尝试 3: GitHub Releases 直接下载 binary
-    if (-not $installed) {
-        Write-Info "winget/scoop 失败,从 GitHub Releases 下载..."
-        try {
-            $rel = Invoke-RestMethod -Uri 'https://api.github.com/repos/psmux/psmux/releases/latest'
-            $asset = $rel.assets | Where-Object { $_.name -match 'windows.*x86_64.*\.zip$|win.*\.zip$' } | Select-Object -First 1
-            if (-not $asset) { throw "找不到 Windows binary 资源" }
-            $zipPath = Join-Path $env:TEMP "psmux-download.zip"
-            Invoke-WebRequest -UseBasicParsing -Uri $asset.browser_download_url -OutFile $zipPath
-            $psmuxDir = Join-Path $InstallDir 'psmux'
-            Expand-Archive -Path $zipPath -DestinationPath $psmuxDir -Force
-            Remove-Item $zipPath -Force
-            # 加 PATH
-            $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-            if ($userPath -notlike "*$psmuxDir*") {
-                [Environment]::SetEnvironmentVariable('Path', "$userPath;$psmuxDir", 'User')
-            }
-            $env:Path = "$env:Path;$psmuxDir"
-            if (Get-Command tmux -ErrorAction SilentlyContinue) { $installed = $true; Write-Success "psmux 装好了 (GitHub Releases)" }
-        } catch {
-            Write-Err "GitHub Releases 下载失败: $_"
+        $rel = Invoke-RestMethod -Uri 'https://api.github.com/repos/psmux/psmux/releases/latest' -UseBasicParsing
+        # 匹配 x86_64 Windows zip 资源
+        $asset = $rel.assets | Where-Object {
+            $_.name -match '(windows|win).*x86_64.*\.zip$' -or
+            $_.name -match 'x86_64.*(windows|win).*\.zip$' -or
+            $_.name -match 'x86_64-pc-windows.*\.zip$'
+        } | Select-Object -First 1
+        if (-not $asset) {
+            # fallback: 找任意 .zip
+            $asset = $rel.assets | Where-Object { $_.name -like '*.zip' } | Select-Object -First 1
         }
+        if (-not $asset) { throw "找不到 psmux 的 Windows zip 资源" }
+        Write-Host "  下载: $($asset.name)"
+        $zipPath = Join-Path $env:TEMP "psmux-download.zip"
+        Invoke-WebRequest -UseBasicParsing -Uri $asset.browser_download_url -OutFile $zipPath
+        $psmuxDir = Join-Path $InstallDir 'psmux'
+        New-Item -ItemType Directory -Force -Path $psmuxDir | Out-Null
+        Expand-Archive -Path $zipPath -DestinationPath $psmuxDir -Force
+        Remove-Item $zipPath -Force
+        # 加 PATH (用户级,无需管理员)
+        $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+        if ($userPath -notlike "*$psmuxDir*") {
+            [Environment]::SetEnvironmentVariable('Path', "$userPath;$psmuxDir", 'User')
+        }
+        $env:Path = "$env:Path;$psmuxDir"
+        if (Get-Command tmux -ErrorAction SilentlyContinue) {
+            $installed = $true
+            Write-Success "psmux 装好了 (GitHub Releases, 无需管理员)"
+        } else {
+            # zip 解压后可能是子目录,试找 tmux.exe 位置加 PATH
+            $found = Get-ChildItem -Path $psmuxDir -Recurse -Filter 'tmux.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) {
+                $exeDir = $found.DirectoryName
+                if ($userPath -notlike "*$exeDir*") {
+                    [Environment]::SetEnvironmentVariable('Path', "$userPath;$exeDir", 'User')
+                }
+                $env:Path = "$env:Path;$exeDir"
+                if (Get-Command tmux -ErrorAction SilentlyContinue) {
+                    $installed = $true
+                    Write-Success "psmux 装好了 ($exeDir)"
+                }
+            }
+        }
+    } catch {
+        Write-Warn "GitHub 下载失败: $_"
     }
     if (-not $installed) {
         Write-Err "psmux 自动安装失败"
-        Write-Host "  手动装任选: " -ForegroundColor Yellow
-        Write-Host "    winget install -e --id marlocarlo.psmux" -ForegroundColor Blue
-        Write-Host "    scoop install psmux" -ForegroundColor Blue
-        Write-Host "    cargo install psmux" -ForegroundColor Blue
-        Write-Host "  或手动下载 https://github.com/psmux/psmux/releases/latest"
+        Write-Host "  手动装:" -ForegroundColor Yellow
+        Write-Host "    方法 A (无需管理员): scoop install psmux" -ForegroundColor Blue
+        Write-Host "    方法 B (需管理员):   winget install -e --id marlocarlo.psmux" -ForegroundColor Blue
+        Write-Host "    方法 C (需 Rust):    cargo install psmux" -ForegroundColor Blue
+        Write-Host "    方法 D: 手动下载 https://github.com/psmux/psmux/releases/latest"
         Write-Host "  装好后重跑本脚本"
         exit 1
     }
