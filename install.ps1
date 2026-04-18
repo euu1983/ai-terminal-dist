@@ -2,6 +2,9 @@
 # 用法: iwr -useb https://dist.ai-terminal.org/install.ps1 | iex
 
 $ErrorActionPreference = 'Stop'
+# 让 Write-Host 输出的中文显示正常 (PowerShell 默认 console 编码可能是 GBK/CP936)
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
 function Write-Info($msg) { Write-Host "→ $msg" -ForegroundColor Blue }
 function Write-Success($msg) { Write-Host "✓ $msg" -ForegroundColor Green }
@@ -50,19 +53,51 @@ if (Get-Command tmux -ErrorAction SilentlyContinue) {
     Write-Success "tmux/psmux 已安装"
 } else {
     Write-Info "安装 psmux (Windows 原生 tmux,支持 session 持久化 + 多客户端)..."
+    $installed = $false
+    # 尝试 1: winget (最标准)
     try {
-        winget install --id psmux.psmux --accept-source-agreements --accept-package-agreements --silent 2>$null
-        # PATH 更新可能要重启 shell 才生效,本次 session 里手动 refresh
+        winget install -e --id marlocarlo.psmux --accept-source-agreements --accept-package-agreements --silent 2>&1 | Out-Null
         $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
-        if (Get-Command tmux -ErrorAction SilentlyContinue) {
-            Write-Success "psmux 安装完成"
-        } else {
-            Write-Warn "psmux 装了但 PATH 还没生效,重启 PowerShell 后再跑 aiterminal"
+        if (Get-Command tmux -ErrorAction SilentlyContinue) { $installed = $true; Write-Success "psmux 装好了 (winget)" }
+    } catch {}
+    # 尝试 2: scoop
+    if (-not $installed -and (Get-Command scoop -ErrorAction SilentlyContinue)) {
+        try {
+            scoop install psmux 2>&1 | Out-Null
+            if (Get-Command tmux -ErrorAction SilentlyContinue) { $installed = $true; Write-Success "psmux 装好了 (scoop)" }
+        } catch {}
+    }
+    # 尝试 3: GitHub Releases 直接下载 binary
+    if (-not $installed) {
+        Write-Info "winget/scoop 失败,从 GitHub Releases 下载..."
+        try {
+            $rel = Invoke-RestMethod -Uri 'https://api.github.com/repos/psmux/psmux/releases/latest'
+            $asset = $rel.assets | Where-Object { $_.name -match 'windows.*x86_64.*\.zip$|win.*\.zip$' } | Select-Object -First 1
+            if (-not $asset) { throw "找不到 Windows binary 资源" }
+            $zipPath = Join-Path $env:TEMP "psmux-download.zip"
+            Invoke-WebRequest -UseBasicParsing -Uri $asset.browser_download_url -OutFile $zipPath
+            $psmuxDir = Join-Path $InstallDir 'psmux'
+            Expand-Archive -Path $zipPath -DestinationPath $psmuxDir -Force
+            Remove-Item $zipPath -Force
+            # 加 PATH
+            $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+            if ($userPath -notlike "*$psmuxDir*") {
+                [Environment]::SetEnvironmentVariable('Path', "$userPath;$psmuxDir", 'User')
+            }
+            $env:Path = "$env:Path;$psmuxDir"
+            if (Get-Command tmux -ErrorAction SilentlyContinue) { $installed = $true; Write-Success "psmux 装好了 (GitHub Releases)" }
+        } catch {
+            Write-Err "GitHub Releases 下载失败: $_"
         }
-    } catch {
-        Write-Err "psmux 安装失败: $_"
-        Write-Host "  手动装: winget install psmux / scoop install psmux / cargo install psmux" -ForegroundColor Yellow
-        Write-Host "  然后重跑本安装脚本"
+    }
+    if (-not $installed) {
+        Write-Err "psmux 自动安装失败"
+        Write-Host "  手动装任选: " -ForegroundColor Yellow
+        Write-Host "    winget install -e --id marlocarlo.psmux" -ForegroundColor Blue
+        Write-Host "    scoop install psmux" -ForegroundColor Blue
+        Write-Host "    cargo install psmux" -ForegroundColor Blue
+        Write-Host "  或手动下载 https://github.com/psmux/psmux/releases/latest"
+        Write-Host "  装好后重跑本脚本"
         exit 1
     }
 }
