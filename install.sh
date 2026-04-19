@@ -194,7 +194,9 @@ EOF
       ;;
     wsl)
       local win_user
-      win_user=$(cmd.exe /c "echo %USERNAME%" 2>/dev/null | tr -d '\r\n')
+      # 注意 < /dev/null: curl|bash 模式 bash 从 stdin 读 install.sh, cmd.exe / powershell.exe
+      # 默认继承 bash 的 stdin (curl 管道), 会吸走 script 后半部分导致 bash 提前 EOF 退出
+      win_user=$(cmd.exe /c "echo %USERNAME%" < /dev/null 2>/dev/null | tr -d '\r\n')
       if [ -z "$win_user" ]; then
         echo -e "${YELLOW}!${NC} $(T '无法检测 Windows 用户, 跳过快捷方式' 'Cannot detect Windows username, skipping shortcut')"
         return
@@ -220,7 +222,7 @@ EOF
 \$lnk.IconLocation = 'C:\\Windows\\System32\\cmd.exe,0'
 \$lnk.Description = '$desc'
 \$lnk.Save()
-" 2>/dev/null; then
+" < /dev/null 2>/dev/null; then
         echo -e "${GREEN}✓${NC} $(T "Windows 桌面快捷方式已创建 (WSL: $distro)" "Windows desktop shortcut created (WSL: $distro)")"
       else
         echo -e "${YELLOW}!${NC} $(T "Windows 桌面快捷方式创建失败 (PowerShell 错误)" "Windows desktop shortcut creation failed (PowerShell error)")"
@@ -383,7 +385,7 @@ if [[ ! $REPLY =~ ^[Nn]$ ]]; then
         ;;
       wsl)
         WSL_DISTRO="${WSL_DISTRO_NAME:-Ubuntu}"
-        cmd.exe /c "start cmd /k wsl -d $WSL_DISTRO -- $TMUX_CMD" >/dev/null 2>&1 \
+        cmd.exe /c "start cmd /k wsl -d $WSL_DISTRO -- $TMUX_CMD" < /dev/null >/dev/null 2>&1 \
           && echo -e "${GREEN}✓${NC} $(T '已打开 Windows cmd 窗口进入 WSL tmux' 'Opened Windows cmd window with WSL tmux')"
         ;;
       linux)
