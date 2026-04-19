@@ -225,9 +225,14 @@ EOF
       else
         echo -e "${YELLOW}!${NC} $(T "Windows 桌面快捷方式创建失败 (PowerShell 错误)" "Windows desktop shortcut creation failed (PowerShell error)")"
       fi
-      if [ -n "$SHELL_RC" ] && [ -f "$SHELL_RC" ] && ! grep -q "aiterminal-tmux" "$SHELL_RC" 2>/dev/null; then
-        echo "alias aiterminal-tmux='$TMUX_CMD'" >> "$SHELL_RC" || true
+      if [ -n "$SHELL_RC" ] && [ -f "$SHELL_RC" ]; then
+        # 注意: set -e + `! grep -q` 在某些 bash 版本里会触发 abort (即便在 if condition 内)
+        # 拆成显式 if/then 避免 ! 操作符
+        if ! grep -q "aiterminal-tmux" "$SHELL_RC" 2>/dev/null; then
+          echo "alias aiterminal-tmux='$TMUX_CMD'" >> "$SHELL_RC" || true
+        fi
       fi
+      return 0  # 强制 return 0, 防止 case 内最后命令非0让 set -e abort 主流程
       ;;
     linux)
       if [ "$HAS_DESKTOP" = true ]; then
@@ -275,6 +280,7 @@ EOF
       fi
       ;;
   esac
+  return 0  # 兜底: 防 case 内任何命令 (尤其 grep 在 set -e 下) 让函数返回非0导致主流程 abort
 }
 
 PLATFORM=$OS
