@@ -337,22 +337,33 @@ echo ""
 echo -e "  $(T 'daemon 命令:' 'daemon command:')  ${BLUE}aiterminal${NC}  $(T '(重启 shell 后)' '(after restarting shell)')"
 echo ""
 
-# 10. 自动启动 daemon
-if [ -t 1 ]; then
-  read -p "$(T '现在启动 daemon? (Y/n) ' 'Start daemon now? (Y/n) ')" -n 1 -r REPLY < /dev/tty || REPLY="y"
-  echo
-  if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-    "$BIN_DIR/aiterminal" &
-    DAEMON_PID=$!
-    sleep 2
+# prompt 辅助: stdin 是 tty 走交互, 否则 echo 提示 + 默认 Y
+# (curl|bash 模式下 stdin 是 pipe, read < /dev/tty 也会失败因为没 controlling tty)
+ask_yn() {
+  local prompt_zh="$1"
+  local prompt_en="$2"
+  local default_y="${3:-y}"
+  if [ -t 0 ]; then
+    read -p "$(T "$prompt_zh" "$prompt_en")" -n 1 -r REPLY < /dev/tty || REPLY="$default_y"
+    echo
+  else
+    echo -e "${BLUE}→${NC} $(T "$prompt_zh" "$prompt_en")$(T '[curl|bash 自动 Y]' '[curl|bash auto Y]')"
+    REPLY="$default_y"
   fi
+}
+
+# 10. 自动启动 daemon
+ask_yn '现在启动 daemon? (Y/n) ' 'Start daemon now? (Y/n) '
+if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+  "$BIN_DIR/aiterminal" &
+  DAEMON_PID=$!
+  sleep 2
+  echo -e "${GREEN}✓${NC} $(T 'daemon 已后台启动 (查看 QR: aiterminal stop && aiterminal)' 'daemon started in background (view QR: aiterminal stop && aiterminal)')"
 fi
 
 # 11. 立刻打开 tmux 窗口让用户开始用
-if [ -t 1 ]; then
-  read -p "$(T '现在直接打开 tmux 让你开始用? (Y/n) ' 'Open a tmux window now to get started? (Y/n) ')" -n 1 -r REPLY < /dev/tty || REPLY="y"
-  echo
-  if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+ask_yn '现在直接打开 tmux 让你开始用? (Y/n) ' 'Open a tmux window now to get started? (Y/n) '
+if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     case $PLATFORM in
       macos)
         osascript -e "tell application \"Terminal\" to do script \"$TMUX_CMD\"" >/dev/null 2>&1 \
@@ -384,5 +395,4 @@ if [ -t 1 ]; then
     esac
     echo ""
     echo -e "  $(T "💡 在 tmux 里跑 ${BLUE}claude${NC} (或其他 AI CLI),手机扫码后自动同步看到" "💡 Run ${BLUE}claude${NC} (or any AI CLI) inside tmux. Once paired, phone mirrors live.")"
-  fi
 fi
