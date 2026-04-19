@@ -3,6 +3,19 @@
 # Usage / 用法:
 #   curl -fsSL https://dist.ai-terminal.org/install.sh | bash
 
+# === stdin re-exec guard (curl|bash 模式) ===
+# 用 curl|bash 跑时, bash 的 stdin 是 curl 管道 (= script 内容). 脚本里调
+# cmd.exe / powershell.exe 等 Windows 子进程时, 它们继承 bash stdin 会消耗
+# script 后半部分内容, bash 读到 EOF 提前退出, 后续 daemon 启动 + tmux prompt 跑不到.
+# 解决: 检测 stdin 不是 tty (= 管道), 把 stdin 全部内容 dump 到 tmp 文件,
+# 然后 exec bash 跑那个 tmp 文件 — 新 bash 的 stdin 不是 script 源, 没有这个 hazard.
+if [ ! -t 0 ] && [ -z "$_AITERMINAL_REEXEC" ]; then
+  _TMP_INST=$(mktemp /tmp/aiterminal-install-XXXXXX.sh)
+  cat > "$_TMP_INST"
+  export _AITERMINAL_REEXEC=1
+  exec bash "$_TMP_INST" "$@"
+fi
+
 set -e
 
 YELLOW='\033[1;33m'
