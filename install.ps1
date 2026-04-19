@@ -28,9 +28,10 @@ $Locale = if ($env:AITERMINAL_LANG) { $env:AITERMINAL_LANG } else { (Get-Culture
 $IsZh = $Locale -eq 'zh'
 function T($zh, $en) { if ($IsZh) { return $zh } else { return $en } }
 
-# === CDN 分流: 中文环境自动用 .cn (Aliyun CDN), 否则用 .org (Cloudflare 全球) ===
+# === CDN 分流: 中文环境自动用 ai-terminal.cn (Aliyun CDN, 根域), 否则用 dist.ai-terminal.org (Cloudflare) ===
+# 注: 国内 CDN 绑根域, 海外用 dist 子域 (二者不对称, 这是当前部署事实)
 # 用户可 $env:AITERMINAL_DOMAIN=dist.ai-terminal.org 强制覆盖
-$DefaultDomain = if ($IsZh) { 'dist.ai-terminal.cn' } else { 'dist.ai-terminal.org' }
+$DefaultDomain = if ($IsZh) { 'ai-terminal.cn' } else { 'dist.ai-terminal.org' }
 
 function Write-Info($msg) { Write-Host "→ $msg" -ForegroundColor Blue }
 function Write-Success($msg) { Write-Host "✓ $msg" -ForegroundColor Green }

@@ -2,7 +2,7 @@
 # AI Terminal daemon uninstaller (macOS / Linux / WSL)
 # Usage / 用法:
 #   curl -fsSL https://dist.ai-terminal.org/uninstall.sh | bash
-#   curl -fsSL https://dist.ai-terminal.cn/uninstall.sh  | bash   # 国内
+#   curl -fsSL https://ai-terminal.cn/uninstall.sh       | bash   # 国内
 
 set +e
 

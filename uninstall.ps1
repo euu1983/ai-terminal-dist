@@ -1,7 +1,7 @@
 # AI Terminal daemon uninstaller (Windows PowerShell)
 # Usage / 用法:
 #   irm https://dist.ai-terminal.org/uninstall.ps1 | iex
-#   irm https://dist.ai-terminal.cn/uninstall.ps1  | iex   # 国内
+#   irm https://ai-terminal.cn/uninstall.ps1       | iex   # 国内
 
 $ErrorActionPreference = 'Continue'
 

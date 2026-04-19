@@ -17,10 +17,11 @@ LANG_PREFIX="${LANG_PREFIX:0:2}"
 case "$LANG_PREFIX" in zh|ZH) IS_ZH=true ;; *) IS_ZH=false ;; esac
 T() { if [ "$IS_ZH" = true ]; then echo "$1"; else echo "$2"; fi }
 
-# === CDN 分流: 中文环境自动用 .cn (Aliyun CDN), 否则 .org (Cloudflare 全球) ===
+# === CDN 分流: 中文环境自动用 ai-terminal.cn (Aliyun CDN, 根域), 否则 dist.ai-terminal.org (Cloudflare) ===
+# 注: 国内 CDN 绑根域, 海外用 dist 子域 (不对称, 当前部署事实)
 # 用户可 AITERMINAL_DOMAIN=dist.ai-terminal.org 强制覆盖
 if [ "$IS_ZH" = true ]; then
-  DEFAULT_DOMAIN='dist.ai-terminal.cn'
+  DEFAULT_DOMAIN='ai-terminal.cn'
 else
   DEFAULT_DOMAIN='dist.ai-terminal.org'
 fi
