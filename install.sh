@@ -208,7 +208,10 @@ EOF
       local desc
       desc=$(T "双击进入 WSL($distro) tmux,在里面跑 AI 工具,手机即可同步" \
                 "Double-click to enter WSL($distro) tmux. Run AI tools inside; phone mirrors live.")
-      powershell.exe -NoProfile -Command "
+      # set -e 下: powershell.exe 退出码非零 (即便 .lnk 创建成功也可能因 warning 非0)
+      # 会触发 set -e 让整个 install.sh abort → 后面的 ask_yn 都跑不到
+      # 用 || true 兜底, 避免 PowerShell 退出码副作用
+      if powershell.exe -NoProfile -Command "
 \$ws = New-Object -ComObject WScript.Shell
 \$lnk = \$ws.CreateShortcut('C:\\Users\\$win_user\\Desktop\\AI Terminal.lnk')
 \$lnk.TargetPath = 'C:\\Windows\\System32\\wsl.exe'
@@ -217,10 +220,13 @@ EOF
 \$lnk.IconLocation = 'C:\\Windows\\System32\\cmd.exe,0'
 \$lnk.Description = '$desc'
 \$lnk.Save()
-" 2>/dev/null && \
+" 2>/dev/null; then
         echo -e "${GREEN}✓${NC} $(T "Windows 桌面快捷方式已创建 (WSL: $distro)" "Windows desktop shortcut created (WSL: $distro)")"
-      if [ -n "$SHELL_RC" ] && [ -f "$SHELL_RC" ] && ! grep -q "aiterminal-tmux" "$SHELL_RC"; then
-        echo "alias aiterminal-tmux='$TMUX_CMD'" >> "$SHELL_RC"
+      else
+        echo -e "${YELLOW}!${NC} $(T "Windows 桌面快捷方式创建失败 (PowerShell 错误)" "Windows desktop shortcut creation failed (PowerShell error)")"
+      fi
+      if [ -n "$SHELL_RC" ] && [ -f "$SHELL_RC" ] && ! grep -q "aiterminal-tmux" "$SHELL_RC" 2>/dev/null; then
+        echo "alias aiterminal-tmux='$TMUX_CMD'" >> "$SHELL_RC" || true
       fi
       ;;
     linux)
