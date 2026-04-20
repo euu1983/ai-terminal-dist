@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Terminal — 隐私政策 / Privacy Policy</title>
+<title>AI Terminal — Privacy Policy</title>
 <style>
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
        max-width: 760px; margin: 40px auto; padding: 20px; line-height: 1.7; color: #2c3338; }
@@ -23,85 +23,8 @@ hr { margin: 40px 0; border: none; border-top: 1px solid #ddd; }
 <body>
 
 <div class="lang-switch">
-  <a href="#zh">中文</a> | <a href="#en">English</a>
+  <a href="#en">English</a> | <a href="#zh">中文</a>
 </div>
-
-<!-- ============ 中文 ============ -->
-<a id="zh"></a>
-<h1>AI Terminal 隐私政策</h1>
-<p class="muted">最后更新: 2026-04-19 · 适用于 AI Terminal Android 应用 (com.openclaw.aiterminal)</p>
-
-<h2>我们是谁</h2>
-<p>AI Terminal 是一款让你从手机远程操控电脑终端 (Claude Code / Cursor / Aider 等 AI 工具) 的应用。本隐私政策说明我们如何处理你的数据。</p>
-
-<h2>我们收集的数据</h2>
-<table>
-<tr><th>数据类型</th><th>用途</th><th>存储位置</th></tr>
-<tr><td>设备标识 (Android ID)</td><td>识别你的手机用于跨连接保持配对状态、计算 14 天免费试用</td><td>中继服务器 (relay)</td></tr>
-<tr><td>公钥 (端到端加密)</td><td>建立你手机和电脑之间的加密信道,中继服务器无法解密通信内容</td><td>中继服务器 + 已配对的电脑端 daemon</td></tr>
-<tr><td>设备名称</td><td>在多设备管理界面显示 (例: "Xiaomi 13 Pro")</td><td>已配对的电脑端 daemon + 你的手机本地</td></tr>
-<tr><td>FCM 推送 token</td><td>电脑离线时通过 Google FCM 推送通知唤醒</td><td>中继服务器</td></tr>
-<tr><td>订阅状态</td><td>校验你的 Google Play 订阅有效性</td><td>中继服务器</td></tr>
-</table>
-
-<h2>我们不收集的数据</h2>
-<ul>
-<li><strong>终端命令内容 / AI 对话内容</strong> — 端到端加密 (X25519 + AES-256-GCM),只有你的手机和已配对电脑能解密。中继服务器和我们都看不到。</li>
-<li><strong>个人身份信息</strong> — 我们不要求注册账号,不收集你的姓名、邮箱、手机号、IP 地址 (IP 仅用于建立 TCP 连接,不持久化记录)。</li>
-<li><strong>位置信息</strong> — 我们不收集 GPS / 网络位置。</li>
-<li><strong>通讯录 / 短信 / 通话记录</strong> — 不申请相关权限。</li>
-<li><strong>广告标识符</strong> — 不集成任何广告 SDK。</li>
-</ul>
-
-<h2>权限使用说明</h2>
-<table>
-<tr><th>权限</th><th>用途</th></tr>
-<tr><td>相机 (CAMERA)</td><td>扫描电脑屏幕上的二维码完成首次配对。我们不录制、不上传、不存储任何相机内容。</td></tr>
-<tr><td>读取媒体 / 文件 (READ_MEDIA_IMAGES / READ_EXTERNAL_STORAGE)</td><td>当你主动选择图片或文件上传到电脑时使用。我们只在你点击"上传"按钮时读取你选中的文件。</td></tr>
-<tr><td>网络访问 (INTERNET / ACCESS_NETWORK_STATE)</td><td>连接中继服务器和你的电脑端 daemon。</td></tr>
-<tr><td>WiFi 状态 / 组播 (ACCESS_WIFI_STATE / CHANGE_WIFI_MULTICAST_STATE)</td><td>在同一局域网内自动发现你的电脑 daemon (mDNS),无需输入 IP。</td></tr>
-<tr><td>前台服务 (FOREGROUND_SERVICE / FOREGROUND_SERVICE_DATA_SYNC)</td><td>大文件下载时的后台传输服务,避免被 Android 系统杀进程导致下载中断。</td></tr>
-<tr><td>开机自启 (RECEIVE_BOOT_COMPLETED)</td><td>开机后自动重连已配对电脑,无需手动启动应用 (你可在系统设置关闭)。</td></tr>
-<tr><td>后台运行 (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS / WAKE_LOCK)</td><td>保持长连接活跃,确保电脑端命令实时推送到手机。</td></tr>
-<tr><td>安装应用 (REQUEST_INSTALL_PACKAGES)</td><td>当你的电脑通过 <code>aiterminal push</code> 推送 APK 文件到手机时,允许你点击安装。我们不主动安装任何应用。</td></tr>
-</table>
-
-<h2>数据共享</h2>
-<p>我们<strong>不</strong>将你的数据共享给任何第三方,包括但不限于广告商、数据分析公司、保险公司等。</p>
-<p>例外情况: 法律强制要求时 (例如法院传票),我们会按法律最低限度披露。</p>
-
-<h2>第三方服务</h2>
-<table>
-<tr><th>服务</th><th>用途</th><th>隐私政策</th></tr>
-<tr><td>Google Play Services / FCM</td><td>推送通知</td><td><a href="https://policies.google.com/privacy">policies.google.com/privacy</a></td></tr>
-<tr><td>Google Play Billing</td><td>订阅支付</td><td>同上</td></tr>
-<tr><td>Cronet (Chromium 网络栈)</td><td>HTTP 客户端</td><td>无独立服务,本地代码库</td></tr>
-</table>
-
-<h2>数据保留</h2>
-<ul>
-<li>设备标识 + 公钥: 你删除应用后,中继服务器上的记录在 90 天内自动清理。</li>
-<li>本地数据 (SharedPreferences / 文件缓存): 删除应用时一并删除。</li>
-<li>FCM token: 你卸载应用后 Google 自动失效。</li>
-</ul>
-
-<h2>儿童隐私</h2>
-<p>本应用不针对 13 岁以下儿童,我们不会有意收集儿童数据。</p>
-
-<h2>你的权利</h2>
-<ul>
-<li><strong>访问</strong>: 在应用"管理设备"页面查看你的设备 ID。</li>
-<li><strong>删除</strong>: 卸载应用即清除本地数据;联系我们 (邮件) 删除中继服务器上的记录。</li>
-<li><strong>拒绝</strong>: 你可以拒绝任何权限,但部分功能 (如扫码配对、文件传输) 将无法使用。</li>
-</ul>
-
-<h2>政策更新</h2>
-<p>本政策可能更新,重大变更我们会在应用内通知。继续使用应用视为同意更新后的政策。</p>
-
-<h2>联系我们</h2>
-<p>问题或数据请求请联系: <a href="mailto:euu1983@gmail.com">euu1983@gmail.com</a></p>
-
-<hr>
 
 <!-- ============ English ============ -->
 <a id="en"></a>
@@ -177,6 +100,83 @@ hr { margin: 40px 0; border: none; border-top: 1px solid #ddd; }
 
 <h2>Contact</h2>
 <p>For questions or data requests: <a href="mailto:euu1983@gmail.com">euu1983@gmail.com</a></p>
+
+<hr>
+
+<!-- ============ 中文 ============ -->
+<a id="zh"></a>
+<h1>AI Terminal 隐私政策</h1>
+<p class="muted">最后更新: 2026-04-19 · 适用于 AI Terminal Android 应用 (com.openclaw.aiterminal)</p>
+
+<h2>我们是谁</h2>
+<p>AI Terminal 是一款让你从手机远程操控电脑终端 (Claude Code / Cursor / Aider 等 AI 工具) 的应用。本隐私政策说明我们如何处理你的数据。</p>
+
+<h2>我们收集的数据</h2>
+<table>
+<tr><th>数据类型</th><th>用途</th><th>存储位置</th></tr>
+<tr><td>设备标识 (Android ID)</td><td>识别你的手机用于跨连接保持配对状态、计算 14 天免费试用</td><td>中继服务器 (relay)</td></tr>
+<tr><td>公钥 (端到端加密)</td><td>建立你手机和电脑之间的加密信道,中继服务器无法解密通信内容</td><td>中继服务器 + 已配对的电脑端 daemon</td></tr>
+<tr><td>设备名称</td><td>在多设备管理界面显示 (例: "Xiaomi 13 Pro")</td><td>已配对的电脑端 daemon + 你的手机本地</td></tr>
+<tr><td>FCM 推送 token</td><td>电脑离线时通过 Google FCM 推送通知唤醒</td><td>中继服务器</td></tr>
+<tr><td>订阅状态</td><td>校验你的 Google Play 订阅有效性</td><td>中继服务器</td></tr>
+</table>
+
+<h2>我们不收集的数据</h2>
+<ul>
+<li><strong>终端命令内容 / AI 对话内容</strong> — 端到端加密 (X25519 + AES-256-GCM),只有你的手机和已配对电脑能解密。中继服务器和我们都看不到。</li>
+<li><strong>个人身份信息</strong> — 我们不要求注册账号,不收集你的姓名、邮箱、手机号、IP 地址 (IP 仅用于建立 TCP 连接,不持久化记录)。</li>
+<li><strong>位置信息</strong> — 我们不收集 GPS / 网络位置。</li>
+<li><strong>通讯录 / 短信 / 通话记录</strong> — 不申请相关权限。</li>
+<li><strong>广告标识符</strong> — 不集成任何广告 SDK。</li>
+</ul>
+
+<h2>权限使用说明</h2>
+<table>
+<tr><th>权限</th><th>用途</th></tr>
+<tr><td>相机 (CAMERA)</td><td>扫描电脑屏幕上的二维码完成首次配对。我们不录制、不上传、不存储任何相机内容。</td></tr>
+<tr><td>读取媒体 / 文件 (READ_MEDIA_IMAGES / READ_EXTERNAL_STORAGE)</td><td>当你主动选择图片或文件上传到电脑时使用。我们只在你点击"上传"按钮时读取你选中的文件。</td></tr>
+<tr><td>网络访问 (INTERNET / ACCESS_NETWORK_STATE)</td><td>连接中继服务器和你的电脑端 daemon。</td></tr>
+<tr><td>WiFi 状态 / 组播 (ACCESS_WIFI_STATE / CHANGE_WIFI_MULTICAST_STATE)</td><td>在同一局域网内自动发现你的电脑 daemon (mDNS),无需输入 IP。</td></tr>
+<tr><td>前台服务 (FOREGROUND_SERVICE / FOREGROUND_SERVICE_DATA_SYNC)</td><td>大文件下载时的后台传输服务,避免被 Android 系统杀进程导致下载中断。</td></tr>
+<tr><td>开机自启 (RECEIVE_BOOT_COMPLETED)</td><td>开机后自动重连已配对电脑,无需手动启动应用 (你可在系统设置关闭)。</td></tr>
+<tr><td>后台运行 (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS / WAKE_LOCK)</td><td>保持长连接活跃,确保电脑端命令实时推送到手机。</td></tr>
+<tr><td>安装应用 (REQUEST_INSTALL_PACKAGES)</td><td>当你的电脑通过 <code>aiterminal push</code> 推送 APK 文件到手机时,允许你点击安装。我们不主动安装任何应用。</td></tr>
+</table>
+
+<h2>数据共享</h2>
+<p>我们<strong>不</strong>将你的数据共享给任何第三方,包括但不限于广告商、数据分析公司、保险公司等。</p>
+<p>例外情况: 法律强制要求时 (例如法院传票),我们会按法律最低限度披露。</p>
+
+<h2>第三方服务</h2>
+<table>
+<tr><th>服务</th><th>用途</th><th>隐私政策</th></tr>
+<tr><td>Google Play Services / FCM</td><td>推送通知</td><td><a href="https://policies.google.com/privacy">policies.google.com/privacy</a></td></tr>
+<tr><td>Google Play Billing</td><td>订阅支付</td><td>同上</td></tr>
+<tr><td>Cronet (Chromium 网络栈)</td><td>HTTP 客户端</td><td>无独立服务,本地代码库</td></tr>
+</table>
+
+<h2>数据保留</h2>
+<ul>
+<li>设备标识 + 公钥: 你删除应用后,中继服务器上的记录在 90 天内自动清理。</li>
+<li>本地数据 (SharedPreferences / 文件缓存): 删除应用时一并删除。</li>
+<li>FCM token: 你卸载应用后 Google 自动失效。</li>
+</ul>
+
+<h2>儿童隐私</h2>
+<p>本应用不针对 13 岁以下儿童,我们不会有意收集儿童数据。</p>
+
+<h2>你的权利</h2>
+<ul>
+<li><strong>访问</strong>: 在应用"管理设备"页面查看你的设备 ID。</li>
+<li><strong>删除</strong>: 卸载应用即清除本地数据;联系我们 (邮件) 删除中继服务器上的记录。</li>
+<li><strong>拒绝</strong>: 你可以拒绝任何权限,但部分功能 (如扫码配对、文件传输) 将无法使用。</li>
+</ul>
+
+<h2>政策更新</h2>
+<p>本政策可能更新,重大变更我们会在应用内通知。继续使用应用视为同意更新后的政策。</p>
+
+<h2>联系我们</h2>
+<p>问题或数据请求请联系: <a href="mailto:euu1983@gmail.com">euu1983@gmail.com</a></p>
 
 </body>
 </html>
