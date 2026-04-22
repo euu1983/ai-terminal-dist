@@ -11,8 +11,17 @@
 # dump it to a tmp file, then exec bash on that file — the new bash's stdin is
 # no longer the script source, so the hazard goes away.
 if [ ! -t 0 ] && [ -z "$_AITERMINAL_REEXEC" ]; then
-  _TMP_INST=$(mktemp /tmp/aiterminal-install-XXXXXX.sh)
-  cat > "$_TMP_INST"
+  # BSD mktemp on macOS fails (mkstemp failed) when stale
+  # /tmp/aiterminal-install-*.sh accumulate from previous failed runs, which
+  # then cascades: cat > "" + exec bash "" blow up silently. Use PID+RANDOM
+  # without mktemp, and clean up historical residue first.
+  rm -f /tmp/aiterminal-install-*.sh 2>/dev/null
+  _TMP_INST=/tmp/aiterminal-install-$$-$RANDOM.sh
+  trap 'rm -f "$_TMP_INST"' EXIT
+  if ! cat > "$_TMP_INST"; then
+    echo "Installer: failed to write $_TMP_INST" >&2
+    exit 1
+  fi
   export _AITERMINAL_REEXEC=1
   exec bash "$_TMP_INST" "$@"
 fi
