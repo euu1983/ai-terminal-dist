@@ -29,7 +29,7 @@ hr { margin: 40px 0; border: none; border-top: 1px solid #ddd; }
 <!-- ============ English ============ -->
 <a id="en"></a>
 <h1>AI Terminal — Privacy Policy</h1>
-<p class="muted">Last updated: 2026-04-19 · Applies to AI Terminal Android app (com.openclaw.aiterminal)</p>
+<p class="muted">Last updated: 2026-04-28 · Applies to AI Terminal Android app (com.openclaw.aiterminal)</p>
 
 <h2>Who We Are</h2>
 <p>AI Terminal lets you remotely control terminal sessions on your computer (Claude Code / Cursor / Aider etc.) from your phone. This policy explains how we handle your data.</p>
@@ -43,6 +43,18 @@ hr { margin: 40px 0; border: none; border-top: 1px solid #ddd; }
 <tr><td>FCM push token</td><td>Wake your computer via Google FCM when offline</td><td>Relay server</td></tr>
 <tr><td>Subscription status</td><td>Validate Google Play subscription</td><td>Relay server</td></tr>
 </table>
+
+<h2>Optional Telemetry &amp; Feedback (Opt-in)</h2>
+<p>The following data is collected <strong>only if you enable it</strong> in <em>Settings → Privacy</em>. All three toggles are <strong>OFF by default</strong>; first-launch consent dialog respects your choice (declining keeps everything off).</p>
+<table>
+<tr><th>Data</th><th>Purpose</th><th>Processor</th><th>Region</th></tr>
+<tr><td>Anonymous usage events (DAU, session length, feature use counters — no input content)</td><td>Understand how features are used to prioritize improvements</td><td>Google Firebase Analytics</td><td>Google global infrastructure</td></tr>
+<tr><td>Crash reports (stack trace, device state, sanitized — sensitive paths/keys/IPs scrubbed before send)</td><td>Identify and fix crashes</td><td>Google Firebase Crashlytics</td><td>Google global infrastructure</td></tr>
+<tr><td>User-submitted feedback (description, optional logs and screenshot, sanitized via 18+ regex client-side and again server-side)</td><td>Process user-reported bugs and suggestions</td><td>Our own feedback endpoint</td><td>Asia + Americas (low-latency multi-region)</td></tr>
+</table>
+<p><strong>Sanitization:</strong> Before any logs or feedback text leaves your device, the client runs a 18-rule regex scrub that strips: API keys (Anthropic, OpenAI, Google, AWS, GitHub PATs), JWT tokens, file paths containing usernames, private network IPs, email addresses, phone numbers. The same scrub runs server-side as a second layer.</p>
+<p><strong>Anonymity:</strong> Telemetry uses a randomly generated install UUID (not Android ID, not your device identifier). We do not link telemetry to your subscription or pairing identity. You can wipe and regenerate the install UUID at any time via <em>Settings → Privacy → Reset Telemetry ID</em>.</p>
+<p><strong>Opt-out:</strong> Toggle off in <em>Settings → Privacy</em> at any time. Past data submitted while opt-in cannot be retroactively recalled (technical limitation), but no further data will be sent.</p>
 
 <h2>Data We Do NOT Collect</h2>
 <ul>
@@ -67,7 +79,12 @@ hr { margin: 40px 0; border: none; border-top: 1px solid #ddd; }
 </table>
 
 <h2>Data Sharing</h2>
-<p>We do <strong>NOT</strong> share your data with any third party, including advertisers, analytics companies, or insurers.</p>
+<p>We do <strong>NOT</strong> share your data with advertisers, data brokers, or insurers.</p>
+<p><strong>Subprocessors</strong> (only if you opt in to telemetry/crash reports):</p>
+<ul>
+<li><strong>Google Firebase</strong> — Analytics and Crashlytics events. Subject to <a href="https://policies.google.com/privacy">Google's Privacy Policy</a>. You can opt out anytime in <em>Settings → Privacy</em>.</li>
+<li><strong>Our feedback endpoint</strong> — only the bug reports you explicitly submit. Stored on access-controlled servers, retained 90 days then auto-purged.</li>
+</ul>
 <p>Exception: When legally required (e.g. court subpoena), we will disclose the minimum required by law.</p>
 
 <h2>Third-Party Services</h2>
@@ -121,6 +138,18 @@ hr { margin: 40px 0; border: none; border-top: 1px solid #ddd; }
 <tr><td>订阅状态</td><td>校验你的 Google Play 订阅有效性</td><td>中继服务器</td></tr>
 </table>
 
+<h2>可选遥测 / 反馈数据 (默认关闭, 自愿启用)</h2>
+<p>以下数据<strong>只有在你于 设置 → 隐私 主动开启</strong>时才会收集。三个开关默认<strong>全部关闭</strong>; 首次启动同意框尊重你的选择 (拒绝即全部关闭, 不会偷偷开启)。</p>
+<table>
+<tr><th>数据类型</th><th>用途</th><th>处理方</th><th>区域</th></tr>
+<tr><td>匿名使用事件 (DAU, 会话时长, 功能使用计数 — 不含任何输入内容)</td><td>理解功能使用情况以决定改进优先级</td><td>Google Firebase Analytics</td><td>Google 全球基础设施</td></tr>
+<tr><td>崩溃报告 (堆栈追踪, 设备状态; 敏感路径 / 密钥 / IP 已 sanitize)</td><td>定位和修复崩溃问题</td><td>Google Firebase Crashlytics</td><td>Google 全球基础设施</td></tr>
+<tr><td>用户主动提交的反馈 (描述, 可选日志和截图; 客户端 18+ 条正则脱敏后再传输, 服务端二次脱敏)</td><td>处理用户上报的 bug 和建议</td><td>我们自有的 feedback 后端</td><td>亚太 + 美洲 (多区域低延迟)</td></tr>
+</table>
+<p><strong>脱敏机制:</strong> 任何日志或反馈文本离开设备前, 客户端运行 18 条正则规则去除: API 密钥 (Anthropic / OpenAI / Google / AWS / GitHub PAT)、JWT token、含用户名的文件路径、内网 IP、邮箱、手机号。服务端再做一次同样的脱敏作为兜底。</p>
+<p><strong>匿名性:</strong> 遥测使用客户端生成的随机安装 UUID (不是 Android ID, 不是你的设备标识符)。我们不把遥测和你的订阅 / 配对身份做关联。你可以随时在 设置 → 隐私 → 重置遥测 ID 清除并重新生成。</p>
+<p><strong>退出:</strong> 在 设置 → 隐私 随时切换关闭。已提交的数据因技术限制无法追溯撤回, 但之后不再上报任何数据。</p>
+
 <h2>我们不收集的数据</h2>
 <ul>
 <li><strong>终端命令内容 / AI 对话内容</strong> — 端到端加密 (X25519 + AES-256-GCM),只有你的手机和已配对电脑能解密。中继服务器和我们都看不到。</li>
@@ -144,7 +173,12 @@ hr { margin: 40px 0; border: none; border-top: 1px solid #ddd; }
 </table>
 
 <h2>数据共享</h2>
-<p>我们<strong>不</strong>将你的数据共享给任何第三方,包括但不限于广告商、数据分析公司、保险公司等。</p>
+<p>我们<strong>不</strong>将你的数据共享给广告商、数据交易方、保险公司等任何第三方。</p>
+<p><strong>子处理者</strong> (仅当你启用遥测 / 崩溃报告时):</p>
+<ul>
+<li><strong>Google Firebase</strong> — 处理 Analytics 与 Crashlytics 事件。受 <a href="https://policies.google.com/privacy">Google 隐私政策</a> 约束。可在 设置 → 隐私 随时退出。</li>
+<li><strong>我们自有的 feedback 后端</strong> — 仅你主动提交的 bug 反馈。存储在受访问控制保护的服务器上, 保留 90 天后自动清除。</li>
+</ul>
 <p>例外情况: 法律强制要求时 (例如法院传票),我们会按法律最低限度披露。</p>
 
 <h2>第三方服务</h2>
