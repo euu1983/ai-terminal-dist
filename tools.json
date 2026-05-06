@@ -1,0 +1,30 @@
+{
+  "version": "2",
+  "updatedAt": "2026-04-19",
+  "tools": [
+    { "id": "claude-code", "name": "Claude Code", "category": "ai", "cmd": "claude --version", "icon": "terminal", "description": "Anthropic AI coding agent", "color": "#D29922", "processNames": ["claude"] },
+    { "id": "copilot", "name": "GitHub Copilot", "category": "ai", "cmd": "copilot --version", "icon": "terminal", "description": "GitHub AI coding agent", "color": "#58A6FF", "processNames": ["copilot"] },
+    { "id": "codex", "name": "Codex CLI", "category": "ai", "cmd": "codex --version", "icon": "terminal", "description": "OpenAI coding agent", "color": "#10A37F", "processNames": ["codex"] },
+    { "id": "gemini", "name": "Gemini CLI", "category": "ai", "cmd": "gemini --version", "icon": "terminal", "description": "Google AI coding agent", "color": "#79C0FF", "processNames": ["gemini"] },
+    { "id": "openclaw", "name": "OpenClaw", "category": "ai", "cmd": "openclaw --version", "icon": "smart_toy", "description": "Open-source AI assistant", "color": "#BC8CFF", "processNames": ["openclaw"] },
+    { "id": "aider", "name": "Aider", "category": "ai", "cmd": "aider --version", "icon": "terminal", "description": "Git-native AI pair programmer", "color": "#E5534B", "processNames": ["aider"] },
+    { "id": "cursor", "name": "Cursor", "category": "ai", "cmd": "cursor --version", "icon": "terminal", "description": "AI-first code editor", "color": "#A855F7", "processNames": ["cursor"] },
+    { "id": "amazon-q", "name": "Amazon Q", "category": "ai", "cmd": "q --version", "icon": "terminal", "description": "AWS AI developer assistant", "color": "#FF9900", "processNames": ["q"] },
+    { "id": "windsurf", "name": "Windsurf", "category": "ai", "cmd": "windsurf --version", "icon": "terminal", "description": "AI-native IDE by Codeium", "color": "#09B6A2", "processNames": ["windsurf", "codeium"] },
+    { "id": "cline", "name": "Cline", "category": "ai", "cmd": "cline --version", "icon": "terminal", "description": "Autonomous AI coding agent", "color": "#6366F1", "processNames": ["cline"] },
+    { "id": "hermes", "name": "Hermes", "category": "ai", "cmd": "hermes --version", "icon": "terminal", "description": "Hermes AI agent", "color": "#FF6B6B", "processNames": ["hermes"] },
+    { "id": "bash", "name": "Bash", "category": "terminal", "cmd": "bash --version", "icon": "code", "description": "Unix shell" },
+    { "id": "zsh", "name": "Zsh", "category": "terminal", "cmd": "zsh --version", "icon": "code", "description": "Z shell" },
+    { "id": "python", "name": "Python", "category": "terminal", "cmd": "python3 --version", "icon": "data_object", "description": "Python interpreter" },
+    { "id": "node", "name": "Node.js", "category": "terminal", "cmd": "node --version", "icon": "javascript", "description": "JavaScript runtime" },
+    { "id": "vim", "name": "Vim", "category": "terminal", "cmd": "vim --version | head -1", "icon": "edit", "description": "Text editor" },
+    { "id": "htop", "name": "htop", "category": "terminal", "cmd": "which htop", "icon": "monitor", "description": "System monitor" }
+  ],
+  "webServices": [
+    { "id": "openclaw-web", "name": "OpenClaw", "port": 18790, "icon": "smart_toy", "description": "OpenClaw Gateway Web UI" },
+    { "id": "jupyter", "name": "Jupyter Notebook", "port": 8888, "icon": "data_object", "description": "Interactive computing" },
+    { "id": "vscode-server", "name": "VS Code Server", "port": 8080, "icon": "code", "description": "Code editor in browser" },
+    { "id": "portainer", "name": "Portainer", "port": 9000, "icon": "monitor", "description": "Docker management" },
+    { "id": "grafana", "name": "Grafana", "port": 3000, "icon": "monitor", "description": "Monitoring dashboard" }
+  ]
+}
