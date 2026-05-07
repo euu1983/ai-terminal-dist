@@ -227,11 +227,20 @@ make_shortcut() {
     macos)
       mkdir -p "$HOME/Applications"
       local target="$HOME/Applications/AI Terminal.command"
+      # 2026-05-08: 双击行为升级 — 先 'aiterminal start' (显 QR / 自动 regen) 再 attach tmux.
+      # 解决"客户找不到命令"的真 UX 问题: 装完不需要懂命令行 / 不需要重开 Terminal,
+      # 5min 配对码过期后双击同一图标即拿新 QR. PATH 显式包 homebrew (Apple Silicon
+      # /opt/homebrew, Intel /usr/local) 防 launchd 自启 daemon 时 node 找不到.
       cat > "$target" <<EOF
 #!/bin/bash
-# Double-click to enter tmux. Run AI tools (claude/cursor/aider) inside; phone mirrors live.
-# 双击进入 tmux, 跑 AI 工具(claude/cursor/aider 等)或终端命令, 手机即可同步
-$TMUX_CMD
+# 双击此图标:
+# 1. 显示新配对码 / QR (供手机 APP 扫码; daemon 在跑就 regen, 没跑就启动)
+# 2. Enter 后进 tmux 跑 AI 工具 (claude/cursor/aider 等), 手机端实时同步
+export PATH=/opt/homebrew/bin:/usr/local/bin:\$PATH
+"\$HOME/.aiterminal/bin/aiterminal" start
+echo ""
+read -p "扫码完成后按 Enter 进入 tmux (Press Enter to enter tmux after scanning)..."
+exec $TMUX_CMD
 EOF
       chmod +x "$target"
       xattr -d com.apple.quarantine "$target" 2>/dev/null || true
