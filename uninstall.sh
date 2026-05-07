@@ -18,7 +18,14 @@ if [ ! -t 0 ] && [ -z "$_AITERMINAL_UNINSTALL_REEXEC" ]; then
     exit 1
   fi
   export _AITERMINAL_UNINSTALL_REEXEC=1
-  exec bash "$_TMP_UN" "$@"
+  # 关键: 把新 bash 的 stdin 接到 /dev/tty, 这样 'read' prompt 能从终端读输入.
+  # 之前不接, 新 bash stdin = 已 EOF 的 pipe, 'read < /dev/tty' 在 Windows
+  # cmd→wsl bash 等环境也常 fail, 用户看不到 prompt 也输不进去.
+  if [ -e /dev/tty ]; then
+    exec bash "$_TMP_UN" "$@" < /dev/tty
+  else
+    exec bash "$_TMP_UN" "$@"
+  fi
 fi
 
 set +e
