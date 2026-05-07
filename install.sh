@@ -150,8 +150,13 @@ if ! command -v tmux >/dev/null 2>&1; then
       macos)    echo -e "  $(T '手动装:' 'Install manually:') ${BLUE}brew install tmux${NC}" ;;
       linux|wsl) echo -e "  $(T '手动装:' 'Install manually:') ${BLUE}sudo apt install -y tmux${NC}  $(T '或对应的包管理器' 'or your distro package manager')" ;;
     esac
-    read -p "$(T '  装好 tmux 后再继续? 现在继续? (y/N) ' '  Install tmux first then re-run? Continue anyway? (y/N) ')" -n 1 -r REPLY < /dev/tty || REPLY=""
-    echo
+    if [ -t 0 ]; then
+      read -p "$(T '  装好 tmux 后再继续? 现在继续? (y/N) ' '  Install tmux first then re-run? Continue anyway? (y/N) ')" -n 1 -r REPLY < /dev/tty || REPLY=""
+      echo
+    else
+      echo -e "${BLUE}→${NC} $(T '装好 tmux 后再继续? [curl|bash 自动 N, 退出]' 'Install tmux first? [curl|bash auto N, exiting]')"
+      REPLY=""
+    fi
     [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
   fi
 else
@@ -338,8 +343,13 @@ OS=$PLATFORM make_shortcut
 # - WSL: 跳过 (走 wsl2 nat, Windows 端 install.ps1 已开 firewall)
 if [ "$PLATFORM" = "linux" ] && [ -t 1 ]; then
   if command -v ufw >/dev/null 2>&1 || command -v firewall-cmd >/dev/null 2>&1; then
-    read -p "$(T '提前授权防火墙开 daemon 端口 (29876, 29877)? (Y/n) — 需要 sudo ' 'Pre-allow firewall for daemon ports (29876, 29877)? (Y/n) — needs sudo ')" -n 1 -r REPLY < /dev/tty || REPLY="y"
-    echo
+    if [ -t 0 ]; then
+      read -p "$(T '提前授权防火墙开 daemon 端口 (29876, 29877)? (Y/n) — 需要 sudo ' 'Pre-allow firewall for daemon ports (29876, 29877)? (Y/n) — needs sudo ')" -n 1 -r REPLY < /dev/tty || REPLY="y"
+      echo
+    else
+      echo -e "${BLUE}→${NC} $(T '防火墙端口 [curl|bash 自动跳过, 启动后系统会弹]' 'Firewall ports [curl|bash auto-skip, OS will prompt on first start]')"
+      REPLY="n"
+    fi
     if [[ ! $REPLY =~ ^[Nn]$ ]]; then
       if command -v ufw >/dev/null 2>&1; then
         sudo ufw allow 29876/tcp comment 'AI Terminal daemon (LAN proxy)' >/dev/null 2>&1 \
@@ -357,8 +367,13 @@ if [ "$PLATFORM" = "linux" ] && [ -t 1 ]; then
   fi
 elif [ "$PLATFORM" = "macos" ] && [ -t 1 ]; then
   # macOS App Firewall: 给 node 二进制加 unblock 列表 + signing
-  read -p "$(T '提前授权 macOS 防火墙放行 node? (Y/n) — 需要 sudo, 避免首次启动弹"允许网络连接"框 ' 'Pre-allow macOS firewall for node? (Y/n) — needs sudo, skips the first-run dialog ')" -n 1 -r REPLY < /dev/tty || REPLY="y"
-  echo
+  if [ -t 0 ]; then
+    read -p "$(T '提前授权 macOS 防火墙放行 node? (Y/n) — 需要 sudo, 避免首次启动弹"允许网络连接"框 ' 'Pre-allow macOS firewall for node? (Y/n) — needs sudo, skips the first-run dialog ')" -n 1 -r REPLY < /dev/tty || REPLY="y"
+    echo
+  else
+    echo -e "${BLUE}→${NC} $(T 'macOS 防火墙 node 放行 [curl|bash 自动跳过, 启动时弹"允许网络连接"框时点允许]' 'macOS firewall for node [curl|bash auto-skip, click Allow on first-run dialog]')"
+    REPLY="n"
+  fi
   if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     NODE_BIN="$(command -v node)"
     if [ -n "$NODE_BIN" ]; then
@@ -372,8 +387,13 @@ fi
 
 # 8.6 开机自启 (Linux: systemd user; macOS: launchd; WSL: skip — Windows 已有)
 if [ "$PLATFORM" != "wsl" ] && [ -t 1 ]; then
-  read -p "$(T '开机自启 daemon? (Y/n) — 推荐 Y, 重启电脑后无需手动启动 ' 'Start daemon at boot? (Y/n) — recommended, no manual start after reboot ')" -n 1 -r REPLY < /dev/tty || REPLY="y"
-  echo
+  if [ -t 0 ]; then
+    read -p "$(T '开机自启 daemon? (Y/n) — 推荐 Y, 重启电脑后无需手动启动 ' 'Start daemon at boot? (Y/n) — recommended, no manual start after reboot ')" -n 1 -r REPLY < /dev/tty || REPLY="y"
+    echo
+  else
+    echo -e "${BLUE}→${NC} $(T '开机自启 [curl|bash 自动 Y]' 'Auto-start at boot [curl|bash auto Y]')"
+    REPLY="y"
+  fi
   if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     if "$BIN_DIR/aiterminal" enable-autostart 2>&1 | tail -5; then
       echo -e "${GREEN}✓${NC} $(T '开机自启已启用' 'Auto-start enabled')"
