@@ -1,7 +1,25 @@
 #!/usr/bin/env bash
 # AI Terminal daemon uninstaller (macOS / Linux / WSL)
 # Usage:
-#   curl -fsSL https://dist.ai-terminal.org/uninstall.sh | bash
+#   curl -fsSL https://get.ai-terminal.org/uninstall.sh | bash
+#   AITERMINAL_FORCE=1 curl ... | bash    # 跳过确认 (CI / 自动化)
+
+# === stdin re-exec guard (curl|bash 模式) ===
+# 跟 install.sh 同款: curl|bash 时 bash stdin = pipe (script 内容), 不是终端,
+# 'read -p ... < /dev/tty' 在某些环境 (Windows cmd 调 WSL bash 等) 仍不通.
+# 解决: 检测 stdin 不是 tty 时, dump script 到 tmp 再 exec 跑, 让新 bash 的
+# stdin = 终端, read prompt 才能交互.
+if [ ! -t 0 ] && [ -z "$_AITERMINAL_UNINSTALL_REEXEC" ]; then
+  rm -f /tmp/aiterminal-uninstall-*.sh 2>/dev/null
+  _TMP_UN=/tmp/aiterminal-uninstall-$$-$RANDOM.sh
+  trap 'rm -f "$_TMP_UN"' EXIT
+  if ! cat > "$_TMP_UN"; then
+    echo "Uninstaller: failed to write $_TMP_UN" >&2
+    exit 1
+  fi
+  export _AITERMINAL_UNINSTALL_REEXEC=1
+  exec bash "$_TMP_UN" "$@"
+fi
 
 set +e
 
@@ -38,8 +56,22 @@ echo -e "  • Node.js / tmux (may be used by other apps)"
 echo -e "  • Received files (under ~/Documents, not install dir)"
 echo ""
 
-read -p "Confirm uninstall? (y/N) " -n 1 -r REPLY < /dev/tty || REPLY=""
-echo
+# 2026-05-07: 加 AITERMINAL_FORCE=1 跳过 prompt 兜底 (CI / 自动化 / 极少环境
+# /dev/tty 不通的 fallback). 加 stdin tty 检测, 非 tty 时不 read, 直接退 cancel
+# 让用户用 FORCE env 显式同意, 不会无故卸载.
+if [ "${AITERMINAL_FORCE:-0}" = "1" ]; then
+  echo -e "${YELLOW}[AITERMINAL_FORCE=1] 跳过确认, 强制卸载${NC}"
+  REPLY="y"
+elif [ -t 0 ]; then
+  read -p "Confirm uninstall? (y/N) " -n 1 -r REPLY < /dev/tty || REPLY=""
+  echo
+else
+  echo -e "${RED}非交互环境 (curl|bash 等 stdin 不是 tty), 无法读 y/N 确认.${NC}"
+  echo -e "请用以下任一方式:"
+  echo -e "  1. 重新跑加 ${YELLOW}AITERMINAL_FORCE=1${NC}: AITERMINAL_FORCE=1 curl ... | bash"
+  echo -e "  2. 下载到本地再跑: curl ... -o /tmp/un.sh && bash /tmp/un.sh"
+  exit 1
+fi
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
   echo -e "Cancelled"
   exit 0
