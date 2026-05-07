@@ -446,8 +446,15 @@ if [[ ! $REPLY =~ ^[Nn]$ ]]; then
         ;;
       wsl)
         WSL_DISTRO="${WSL_DISTRO_NAME:-Ubuntu}"
-        cmd.exe /c "start cmd /k wsl -d $WSL_DISTRO -- $TMUX_CMD" < /dev/null >/dev/null 2>&1 \
-          && echo -e "${GREEN}✓${NC} $(T '已打开 Windows cmd 窗口进入 WSL tmux' 'Opened Windows cmd window with WSL tmux')"
+        # 2026-05-07: 加 timeout 5s + 后台 disown 防 cmd.exe 链 hang. WSL non-tty 调
+        # 'cmd.exe /c "start cmd /k wsl ..."' 在某些环境永挂, 阻塞整个 install.sh 后续输出.
+        # timeout 5s 失败 fallback to 提示手动开 tmux.
+        if timeout 5 cmd.exe /c "start cmd /k wsl -d $WSL_DISTRO -- $TMUX_CMD" < /dev/null >/dev/null 2>&1; then
+          echo -e "${GREEN}✓${NC} $(T '已打开 Windows cmd 窗口进入 WSL tmux' 'Opened Windows cmd window with WSL tmux')"
+        else
+          echo -e "${YELLOW}!${NC} $(T 'cmd.exe 启动 tmux 窗口失败或超时, 请手动开:' 'Failed to spawn tmux window, please run manually:')"
+          echo -e "  ${BLUE}$TMUX_CMD${NC}"
+        fi
         ;;
       linux)
         if [ "$HAS_DESKTOP" = true ]; then
