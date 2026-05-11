@@ -150,13 +150,8 @@ if ! command -v tmux >/dev/null 2>&1; then
       macos)    echo -e "  $(T '手动装:' 'Install manually:') ${BLUE}brew install tmux${NC}" ;;
       linux|wsl) echo -e "  $(T '手动装:' 'Install manually:') ${BLUE}sudo apt install -y tmux${NC}  $(T '或对应的包管理器' 'or your distro package manager')" ;;
     esac
-    if [ -t 0 ]; then
-      read -p "$(T '  装好 tmux 后再继续? 现在继续? (y/N) ' '  Install tmux first then re-run? Continue anyway? (y/N) ')" -n 1 -r REPLY < /dev/tty || REPLY=""
-      echo
-    else
-      echo -e "${BLUE}→${NC} $(T '装好 tmux 后再继续? [curl|bash 自动 N, 退出]' 'Install tmux first? [curl|bash auto N, exiting]')"
-      REPLY=""
-    fi
+    read -p "$(T '  装好 tmux 后再继续? 现在继续? (y/N) ' '  Install tmux first then re-run? Continue anyway? (y/N) ')" -n 1 -r REPLY < /dev/tty || REPLY=""
+    echo
     [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
   fi
 else
@@ -227,20 +222,11 @@ make_shortcut() {
     macos)
       mkdir -p "$HOME/Applications"
       local target="$HOME/Applications/AI Terminal.command"
-      # 2026-05-08: 双击行为升级 — 先 'aiterminal start' (显 QR / 自动 regen) 再 attach tmux.
-      # 解决"客户找不到命令"的真 UX 问题: 装完不需要懂命令行 / 不需要重开 Terminal,
-      # 5min 配对码过期后双击同一图标即拿新 QR. PATH 显式包 homebrew (Apple Silicon
-      # /opt/homebrew, Intel /usr/local) 防 launchd 自启 daemon 时 node 找不到.
       cat > "$target" <<EOF
 #!/bin/bash
-# 双击此图标:
-# 1. 显示新配对码 / QR (供手机 APP 扫码; daemon 在跑就 regen, 没跑就启动)
-# 2. Enter 后进 tmux 跑 AI 工具 (claude/cursor/aider 等), 手机端实时同步
-export PATH=/opt/homebrew/bin:/usr/local/bin:\$PATH
-"\$HOME/.aiterminal/bin/aiterminal" start
-echo ""
-read -p "扫码完成后按 Enter 进入 tmux (Press Enter to enter tmux after scanning)..."
-exec $TMUX_CMD
+# Double-click to enter tmux. Run AI tools (claude/cursor/aider) inside; phone mirrors live.
+# 双击进入 tmux, 跑 AI 工具(claude/cursor/aider 等)或终端命令, 手机即可同步
+$TMUX_CMD
 EOF
       chmod +x "$target"
       xattr -d com.apple.quarantine "$target" 2>/dev/null || true
@@ -352,13 +338,8 @@ OS=$PLATFORM make_shortcut
 # - WSL: 跳过 (走 wsl2 nat, Windows 端 install.ps1 已开 firewall)
 if [ "$PLATFORM" = "linux" ] && [ -t 1 ]; then
   if command -v ufw >/dev/null 2>&1 || command -v firewall-cmd >/dev/null 2>&1; then
-    if [ -t 0 ]; then
-      read -p "$(T '提前授权防火墙开 daemon 端口 (29876, 29877)? (Y/n) — 需要 sudo ' 'Pre-allow firewall for daemon ports (29876, 29877)? (Y/n) — needs sudo ')" -n 1 -r REPLY < /dev/tty || REPLY="y"
-      echo
-    else
-      echo -e "${BLUE}→${NC} $(T '防火墙端口 [curl|bash 自动跳过, 启动后系统会弹]' 'Firewall ports [curl|bash auto-skip, OS will prompt on first start]')"
-      REPLY="n"
-    fi
+    read -p "$(T '提前授权防火墙开 daemon 端口 (29876, 29877)? (Y/n) — 需要 sudo ' 'Pre-allow firewall for daemon ports (29876, 29877)? (Y/n) — needs sudo ')" -n 1 -r REPLY < /dev/tty || REPLY="y"
+    echo
     if [[ ! $REPLY =~ ^[Nn]$ ]]; then
       if command -v ufw >/dev/null 2>&1; then
         sudo ufw allow 29876/tcp comment 'AI Terminal daemon (LAN proxy)' >/dev/null 2>&1 \
@@ -376,13 +357,8 @@ if [ "$PLATFORM" = "linux" ] && [ -t 1 ]; then
   fi
 elif [ "$PLATFORM" = "macos" ] && [ -t 1 ]; then
   # macOS App Firewall: 给 node 二进制加 unblock 列表 + signing
-  if [ -t 0 ]; then
-    read -p "$(T '提前授权 macOS 防火墙放行 node? (Y/n) — 需要 sudo, 避免首次启动弹"允许网络连接"框 ' 'Pre-allow macOS firewall for node? (Y/n) — needs sudo, skips the first-run dialog ')" -n 1 -r REPLY < /dev/tty || REPLY="y"
-    echo
-  else
-    echo -e "${BLUE}→${NC} $(T 'macOS 防火墙 node 放行 [curl|bash 自动跳过, 启动时弹"允许网络连接"框时点允许]' 'macOS firewall for node [curl|bash auto-skip, click Allow on first-run dialog]')"
-    REPLY="n"
-  fi
+  read -p "$(T '提前授权 macOS 防火墙放行 node? (Y/n) — 需要 sudo, 避免首次启动弹"允许网络连接"框 ' 'Pre-allow macOS firewall for node? (Y/n) — needs sudo, skips the first-run dialog ')" -n 1 -r REPLY < /dev/tty || REPLY="y"
+  echo
   if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     NODE_BIN="$(command -v node)"
     if [ -n "$NODE_BIN" ]; then
@@ -396,13 +372,8 @@ fi
 
 # 8.6 开机自启 (Linux: systemd user; macOS: launchd; WSL: skip — Windows 已有)
 if [ "$PLATFORM" != "wsl" ] && [ -t 1 ]; then
-  if [ -t 0 ]; then
-    read -p "$(T '开机自启 daemon? (Y/n) — 推荐 Y, 重启电脑后无需手动启动 ' 'Start daemon at boot? (Y/n) — recommended, no manual start after reboot ')" -n 1 -r REPLY < /dev/tty || REPLY="y"
-    echo
-  else
-    echo -e "${BLUE}→${NC} $(T '开机自启 [curl|bash 自动 Y]' 'Auto-start at boot [curl|bash auto Y]')"
-    REPLY="y"
-  fi
+  read -p "$(T '开机自启 daemon? (Y/n) — 推荐 Y, 重启电脑后无需手动启动 ' 'Start daemon at boot? (Y/n) — recommended, no manual start after reboot ')" -n 1 -r REPLY < /dev/tty || REPLY="y"
+  echo
   if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     if "$BIN_DIR/aiterminal" enable-autostart 2>&1 | tail -5; then
       echo -e "${GREEN}✓${NC} $(T '开机自启已启用' 'Auto-start enabled')"
@@ -455,15 +426,8 @@ if [[ ! $REPLY =~ ^[Nn]$ ]]; then
         ;;
       wsl)
         WSL_DISTRO="${WSL_DISTRO_NAME:-Ubuntu}"
-        # 2026-05-07: 加 timeout 5s + 后台 disown 防 cmd.exe 链 hang. WSL non-tty 调
-        # 'cmd.exe /c "start cmd /k wsl ..."' 在某些环境永挂, 阻塞整个 install.sh 后续输出.
-        # timeout 5s 失败 fallback to 提示手动开 tmux.
-        if timeout 5 cmd.exe /c "start cmd /k wsl -d $WSL_DISTRO -- $TMUX_CMD" < /dev/null >/dev/null 2>&1; then
-          echo -e "${GREEN}✓${NC} $(T '已打开 Windows cmd 窗口进入 WSL tmux' 'Opened Windows cmd window with WSL tmux')"
-        else
-          echo -e "${YELLOW}!${NC} $(T 'cmd.exe 启动 tmux 窗口失败或超时, 请手动开:' 'Failed to spawn tmux window, please run manually:')"
-          echo -e "  ${BLUE}$TMUX_CMD${NC}"
-        fi
+        cmd.exe /c "start cmd /k wsl -d $WSL_DISTRO -- $TMUX_CMD" < /dev/null >/dev/null 2>&1 \
+          && echo -e "${GREEN}✓${NC} $(T '已打开 Windows cmd 窗口进入 WSL tmux' 'Opened Windows cmd window with WSL tmux')"
         ;;
       linux)
         if [ "$HAS_DESKTOP" = true ]; then
