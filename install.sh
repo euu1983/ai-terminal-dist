@@ -167,28 +167,13 @@ if ! curl -fsSL "https://${DOMAIN}/dist/aiterminal.js" -o "$BIN_DIR/aiterminal.j
 fi
 chmod +x "$BIN_DIR/aiterminal.js"
 
-# 创建 wrapper 脚本 (handles node-pty NODE_PATH)
+# 创建 wrapper 脚本
 cat > "$BIN_DIR/aiterminal" <<EOF
 #!/bin/sh
-export NODE_PATH="$PKG_DIR/node_modules:\${NODE_PATH:-}"
 exec node "$BIN_DIR/aiterminal.js" "\$@"
 EOF
 chmod +x "$BIN_DIR/aiterminal"
 echo -e "${GREEN}✓${NC} $(T "daemon 已下载到 $BIN_DIR" "daemon downloaded to $BIN_DIR")"
-
-# 5. 装 node-pty
-echo -e "${BLUE}→${NC} $(T '安装 node-pty (终端原生模块)...' 'Installing node-pty (terminal native module)...')"
-cd "$PKG_DIR"
-if [ ! -f package.json ]; then
-  cat > package.json <<EOF
-{ "name": "aiterminal-pkg", "version": "1.0.0", "private": true }
-EOF
-fi
-if npm install --no-save --silent node-pty@^1.1.0 2>/dev/null; then
-  echo -e "${GREEN}✓${NC} $(T 'node-pty 安装成功' 'node-pty installed')"
-else
-  echo -e "${YELLOW}!${NC} $(T 'node-pty 安装失败 (Linux/macOS 终端功能受限)' 'node-pty install failed (terminal features will be limited)')"
-fi
 
 # 6. 加入 PATH
 SHELL_RC=""
@@ -426,8 +411,10 @@ if [[ ! $REPLY =~ ^[Nn]$ ]]; then
         ;;
       wsl)
         WSL_DISTRO="${WSL_DISTRO_NAME:-Ubuntu}"
-        cmd.exe /c "start cmd /k wsl -d $WSL_DISTRO -- $TMUX_CMD" < /dev/null >/dev/null 2>&1 \
-          && echo -e "${GREEN}✓${NC} $(T '已打开 Windows cmd 窗口进入 WSL tmux' 'Opened Windows cmd window with WSL tmux')"
+        # nohup+disown 防 irm|iex 管道模式下 cmd.exe 永久 hang (STAT=T).
+        nohup cmd.exe /c "start cmd /k wsl -d $WSL_DISTRO -- $TMUX_CMD" </dev/null >/dev/null 2>&1 &
+        disown
+        echo -e "${GREEN}✓${NC} $(T '已打开 Windows cmd 窗口进入 WSL tmux' 'Opened Windows cmd window with WSL tmux')"
         ;;
       linux)
         if [ "$HAS_DESKTOP" = true ]; then
