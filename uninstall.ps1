@@ -23,6 +23,21 @@ function Write-Info($msg) { Write-Host "→ $msg" -ForegroundColor Blue }
 function Write-Success($msg) { Write-Host "✓ $msg" -ForegroundColor Green }
 function Write-Warn($msg) { Write-Host "! $msg" -ForegroundColor Yellow }
 
+# 2026-05-15: 非交互检测 helper. 修 `irm | iex` 流下 Read-Host 卡死 bug.
+# Pipeline 场景 (脚本经 iex 执行) stdin 已绑给 iex 解析 → Read-Host 等不到键盘 → hang.
+# 设计: 自动 detect 非交互, 用 default 答案; AITERMINAL_NO_INTERACTIVE=1 env 也强 default.
+function Read-HostOrDefault($prompt, $default) {
+    $isNonInteractive = $false
+    try { if ([Console]::IsInputRedirected) { $isNonInteractive = $true } } catch {}
+    if (-not [Environment]::UserInteractive) { $isNonInteractive = $true }
+    if ($env:AITERMINAL_NO_INTERACTIVE) { $isNonInteractive = $true }
+    if ($isNonInteractive) {
+        Write-Host "${prompt} [non-interactive, using default → ${default}]" -ForegroundColor DarkGray
+        return $default
+    }
+    return Read-Host $prompt
+}
+
 $InstallDir = if ($env:AITERMINAL_HOME) { $env:AITERMINAL_HOME } else { Join-Path $env:USERPROFILE '.aiterminal' }
 $BinDir = Join-Path $InstallDir 'bin'
 
@@ -42,7 +57,7 @@ Write-Host (T "  • Node.js (用户可能给别的程序用)" "  • Node.js (m
 Write-Host (T "  • 你接收过的文件 (Documents/.aiterminal/* 不在 install 路径下)" "  • Files you received (under Documents, not install dir)")
 Write-Host ""
 
-$confirm = Read-Host (T "确认卸载? (y/N)" "Confirm uninstall? (y/N)")
+$confirm = Read-HostOrDefault (T "确认卸载? (y/N)" "Confirm uninstall? (y/N)") 'y'
 if ($confirm -ne 'y' -and $confirm -ne 'Y') {
     Write-Host (T "已取消" "Cancelled")
     exit 0
@@ -90,7 +105,7 @@ if ($newPath -ne $userPath) {
 }
 
 # 5. 删防火墙规则 (需 UAC)
-$fwAns = Read-Host (T "删除防火墙规则? (Y/n) — 会弹一次 UAC" "Remove firewall rules? (Y/n) — UAC prompt")
+$fwAns = Read-HostOrDefault (T "删除防火墙规则? (Y/n) — 会弹一次 UAC" "Remove firewall rules? (Y/n) — UAC prompt") 'Y'
 if ($fwAns -ne 'n' -and $fwAns -ne 'N') {
     try {
         $fwScript = @'

@@ -38,6 +38,22 @@ function Write-Success($msg) { Write-Host "✓ $msg" -ForegroundColor Green }
 function Write-Warn($msg) { Write-Host "! $msg" -ForegroundColor Yellow }
 function Write-Err($msg) { Write-Host "✗ $msg" -ForegroundColor Red }
 
+# 2026-05-15: 非交互 helper. 修 `irm | iex` 流下 Read-Host 卡死 bug.
+# `irm | iex` 推荐用法是 non-interactive 但脚本里多个 Read-Host 等键盘 → silently hang.
+# 自动 detect (Console::IsInputRedirected / Environment::UserInteractive 任一为真 = 非交互),
+# 或 env AITERMINAL_NO_INTERACTIVE=1 强 default. 默认走脚本推荐值.
+function Read-HostOrDefault($prompt, $default) {
+    $isNonInteractive = $false
+    try { if ([Console]::IsInputRedirected) { $isNonInteractive = $true } } catch {}
+    if (-not [Environment]::UserInteractive) { $isNonInteractive = $true }
+    if ($env:AITERMINAL_NO_INTERACTIVE) { $isNonInteractive = $true }
+    if ($isNonInteractive) {
+        Write-Host "${prompt} [non-interactive, using default → ${default}]" -ForegroundColor DarkGray
+        return $default
+    }
+    return Read-Host $prompt
+}
+
 $Domain = if ($env:AITERMINAL_DOMAIN) { $env:AITERMINAL_DOMAIN } else { $DefaultDomain }
 $InstallDir = if ($env:AITERMINAL_HOME) { $env:AITERMINAL_HOME } else { Join-Path $env:USERPROFILE '.aiterminal' }
 $BinDir = Join-Path $InstallDir 'bin'
@@ -243,8 +259,8 @@ if ($true) {
 # 12. 预授权 Windows Defender Firewall (避免 daemon 首次启动弹"允许通信"对话框)
 # 加 inbound 规则放行 daemon 端口 29876 + 29877 (LAN 配对/管理 API)
 # 用 PS Start-Process -Verb RunAs 触发 UAC 一次性授权; 用户拒绝就跳过 (daemon 仍会跑, 只是首次会弹原生授权框)
-$fwAns = Read-Host (T "提前授权 Windows 防火墙开放 daemon 端口? (Y/n) — 推荐 Y, 避免首次启动弹授权框 (会弹一次 UAC)" `
-                       "Pre-allow Windows Firewall for daemon ports? (Y/n) — recommended Y to skip the first-run prompt (one UAC needed)")
+$fwAns = Read-HostOrDefault (T "提前授权 Windows 防火墙开放 daemon 端口? (Y/n) — 推荐 Y, 避免首次启动弹授权框 (会弹一次 UAC)" `
+                       "Pre-allow Windows Firewall for daemon ports? (Y/n) — recommended Y to skip the first-run prompt (one UAC needed)") 'Y'
 if ($fwAns -ne 'n' -and $fwAns -ne 'N') {
     try {
         $fwScript = @"
@@ -264,8 +280,8 @@ New-NetFirewallRule -DisplayName 'AI Terminal daemon (29877)' -Direction Inbound
 }
 
 # 13. 开机自启 daemon (用 cli.js 的 enable-autostart, 写 HKCU\Run + VBS 隐藏窗口)
-$autostartAns = Read-Host (T "开机自启 daemon? (Y/n) — 推荐 Y, 这样 Windows 重启后无需手动启动" `
-                            "Start daemon at boot? (Y/n) — recommended Y so you don't have to manually start after reboot")
+$autostartAns = Read-HostOrDefault (T "开机自启 daemon? (Y/n) — 推荐 Y, 这样 Windows 重启后无需手动启动" `
+                            "Start daemon at boot? (Y/n) — recommended Y so you don't have to manually start after reboot") 'Y'
 if ($autostartAns -ne 'n' -and $autostartAns -ne 'N') {
     try {
         & $wrapperPath enable-autostart
@@ -275,13 +291,13 @@ if ($autostartAns -ne 'n' -and $autostartAns -ne 'N') {
 }
 
 # 13. 自动启动 daemon
-$launch = Read-Host (T "现在启动 daemon? (Y/n)" "Start daemon now? (Y/n)")
+$launch = Read-HostOrDefault (T "现在启动 daemon? (Y/n)" "Start daemon now? (Y/n)") 'Y'
 if ($launch -ne 'n' -and $launch -ne 'N') {
     & $wrapperPath
 }
 
 # 13. 立刻打开 tmux 窗口让用户开始用
-$openNow = Read-Host (T "现在直接打开 tmux 让你开始用? (Y/n)" "Open a tmux window now to get started? (Y/n)")
+$openNow = Read-HostOrDefault (T "现在直接打开 tmux 让你开始用? (Y/n)" "Open a tmux window now to get started? (Y/n)") 'Y'
 if ($openNow -ne 'n' -and $openNow -ne 'N') {
     Start-Process -FilePath $tmuxLauncher
     Write-Host ""
