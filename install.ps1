@@ -97,6 +97,18 @@ try {
 }
 
 # 4. 检测 + 安装 psmux (Windows 原生 tmux 兼容,提供 tmux.exe)
+# Self-heal: 老用户重跑 install.ps1 时, 如果 daemon 期望路径 ~/.aiterminal/psmux/tmux.exe
+# 不存在但 ~/.aiterminal/bin/tmux.exe 存在 (历史 install 部分清理过 psmux/ 子目录),
+# 自动 copy 回 psmux/. daemon (tmux.js:23-26) 写死期望顶层 psmux/tmux.exe.
+$psmuxExpected = Join-Path $InstallDir 'psmux\tmux.exe'
+$binTmux = Join-Path $InstallDir 'bin\tmux.exe'
+if ((Test-Path $binTmux) -and (-not (Test-Path $psmuxExpected))) {
+    Write-Info (T "检测到 psmux/tmux.exe 缺失但 bin/tmux.exe 存在, self-heal 中..." `
+                 "Detected missing psmux/tmux.exe but bin/tmux.exe present, self-healing...")
+    New-Item -ItemType Directory -Force -Path (Split-Path $psmuxExpected -Parent) | Out-Null
+    Copy-Item $binTmux $psmuxExpected -Force
+    Write-Success (T "psmux/tmux.exe 已 self-heal" "psmux/tmux.exe self-healed")
+}
 if (Get-Command tmux -ErrorAction SilentlyContinue) {
     Write-Success (T "tmux/psmux 已安装" "tmux/psmux already installed")
 } else {
@@ -131,9 +143,15 @@ if (Get-Command tmux -ErrorAction SilentlyContinue) {
             $installed = $true
             Write-Success (T "psmux 装好了 ($exeDir)" "psmux installed at ($exeDir)")
         }
-        # 冗余: 把 tmux.exe 复制到 bin/, 即便 PATH 没刷新也能找到
+        # daemon (tmux.js:23-26) 写死 TMUX_BIN = ~/.aiterminal/psmux/tmux.exe.
+        # 必须 ensure 顶层 psmux/tmux.exe 存在 (如果 zip 解压有子目录, copy 到顶层).
         $psmuxTmux = Join-Path $exeDir 'tmux.exe'
+        $expectedTmux = Join-Path $psmuxDir 'tmux.exe'  # 顶层位置 (daemon 期望)
         if (Test-Path $psmuxTmux) {
+            if ($psmuxTmux -ne $expectedTmux) {
+                Copy-Item $psmuxTmux $expectedTmux -Force
+            }
+            # 冗余: 也 copy 到 bin/, 即便 PATH 没刷新也能找到 (CLI 路径)
             New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
             Copy-Item $psmuxTmux (Join-Path $BinDir 'tmux.exe') -Force
             $psmuxExe = Join-Path $exeDir 'psmux.exe'
