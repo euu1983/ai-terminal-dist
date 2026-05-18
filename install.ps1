@@ -185,21 +185,11 @@ node "$bundlePath" %*
 "@
 Set-Content -Path $wrapperPath -Value $wrapperContent -Encoding ASCII
 
-# 8. 装 node-pty
-Write-Info (T "安装 node-pty (终端原生模块)..." "Installing node-pty (terminal native module)...")
-Push-Location $PkgDir
-try {
-    if (-not (Test-Path 'package.json')) {
-        '{ "name": "aiterminal-pkg", "version": "1.0.0", "private": true }' | Set-Content -Path 'package.json' -Encoding UTF8
-    }
-    npm install --no-save --silent node-pty@^1.1.0 2>$null | Out-Null
-    Write-Success (T "node-pty 已安装" "node-pty installed")
-} catch {
-    Write-Warn (T "node-pty 安装失败,daemon 可能无法启动 PowerShell" `
-                "node-pty install failed; daemon may not be able to start PowerShell")
-} finally {
-    Pop-Location
-}
+# 8. (removed) node-pty 装
+# 2026-05-15 daemon 重构: src/terminal/index.js 改为统一 re-export tmux, 不再使用 PtyBackend.
+# node-pty 依赖 + pty-backend.js / backend.js 整体删除, daemon bundle 不含 node-pty 引用 (verified).
+# 本步骤之前在 Windows 上需要 VS Build Tools + Python 装 native module, 大部分用户没装 → silent fail
+# 且 error 全吞 (2>$null | Out-Null) 让用户看不到原因. 移除后 install.ps1 装成功率 ↑.
 
 # 9. 加入 PATH (用户级)
 $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
