@@ -23,7 +23,8 @@
     { "id": "python", "name": "Python", "category": "terminal", "cmd": "python3 --version", "icon": "data_object", "description": "Python interpreter" },
     { "id": "node", "name": "Node.js", "category": "terminal", "cmd": "node --version", "icon": "javascript", "description": "JavaScript runtime" },
     { "id": "vim", "name": "Vim", "category": "terminal", "cmd": "vim --version | head -1", "icon": "edit", "description": "Text editor" },
-    { "id": "htop", "name": "htop", "category": "terminal", "cmd": "which htop", "icon": "monitor", "description": "System monitor" }
+    { "id": "htop", "name": "htop", "category": "terminal", "cmd": "which htop", "icon": "monitor", "description": "System monitor" },
+    { "id": "cmd", "name": "CMD", "category": "terminal", "cmd": "cmd /c ver", "icon": "code", "description": "Windows command prompt" }
   ],
   "webServices": [
     { "id": "openclaw-web", "name": "OpenClaw", "port": 18790, "icon": "smart_toy", "description": "OpenClaw Gateway Web UI" },
