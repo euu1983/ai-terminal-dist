@@ -160,12 +160,68 @@ fi
 
 # 4. 下载 daemon bundle
 mkdir -p "$BIN_DIR" "$PKG_DIR"
+# 持久化装机 CDN 域名: daemon auto-update getDomain() 读它 (国内=ai-terminal.cn),
+# 避免自更新默认回海外 .org 致国内下载超时 (2026-05-21). 优先级低于 env AITERMINAL_DOMAIN.
+printf '%s' "$DOMAIN" > "$INSTALL_DIR/install-domain" 2>/dev/null || true
 echo -e "${BLUE}→${NC} $(T '下载 daemon...' 'Downloading daemon bundle...')"
 if ! curl -fsSL "https://${DOMAIN}/dist/aiterminal.js" -o "$BIN_DIR/aiterminal.js"; then
   echo -e "${RED}✗${NC} $(T '下载失败' 'Download failed') (https://${DOMAIN}/dist/aiterminal.js)"
   exit 1
 fi
 chmod +x "$BIN_DIR/aiterminal.js"
+
+# 下载 runtime-external flock helper (DEPLOY CONTRACT, 见 build-bundle.js):
+# comms-store/task-store 锁内 shell out 跑 <bundle_dir>/../scripts/jsonl_locked_rmw.js
+# (= $INSTALL_DIR/scripts/, 因 bundle 在 $BIN_DIR/). 缺它则 comms ack/done/update +
+# task 写全 PERSIST_FAILED, 跨 session 消息卡 pending. esbuild 不 inline 它 (非 require).
+mkdir -p "$INSTALL_DIR/scripts"
+if ! curl -fsSL "https://${DOMAIN}/dist/scripts/jsonl_locked_rmw.js" -o "$INSTALL_DIR/scripts/jsonl_locked_rmw.js"; then
+  echo -e "${RED}✗${NC} $(T 'helper 下载失败 (comms 持久化会挂)' 'Helper download failed (comms persistence will break)') (https://${DOMAIN}/dist/scripts/jsonl_locked_rmw.js)"
+  exit 1
+fi
+
+# 下载 per-platform/arch pkg-deps (DEPLOY CONTRACT, 见 build-bundle.js): daemon bundle 把
+# node-pty/sodium-native/sodium-universal 设 external, 运行时从 node_modules 解析 (node 从 $BIN_DIR
+# 向上走 → $INSTALL_DIR/node_modules). install 不 populate 则 daemon LIVE 但 pty.spawn 起不来
+# (node-pty 缺) → attach silent fail (0.4.7 同 class 雷). node-pty 无 linux prebuild (linux 用
+# build/Release 编译产物, glibc 链接); linux-arm64 + musl/Alpine 无可用二进制 = documented gap.
+case "$OS" in
+  wsl|linux) PKG_PLAT="linux" ;;
+  macos)     PKG_PLAT="macos" ;;
+  *)         PKG_PLAT="" ;;
+esac
+case "$(uname -m)" in
+  x86_64|amd64)  PKG_ARCH="x64" ;;
+  aarch64|arm64) PKG_ARCH="arm64" ;;
+  *)             PKG_ARCH="" ;;
+esac
+case "${PKG_PLAT}-${PKG_ARCH}" in
+  macos-x64|macos-arm64|linux-x64) : ;;   # 支持矩阵
+  *)
+    echo -e "${RED}✗${NC} $(T "暂不支持的平台/架构: ${PKG_PLAT:-$OS}-${PKG_ARCH:-$(uname -m)}" "Unsupported platform/arch: ${PKG_PLAT:-$OS}-${PKG_ARCH:-$(uname -m)}")"
+    echo -e "  $(T 'daemon 运行依赖 (node-pty) 无此平台预编译二进制 (linux-arm64 / 非 x86_64 暂缺).' 'No prebuilt daemon runtime deps (node-pty) for this platform (linux-arm64 / non-x86_64 not yet shipped).')"
+    echo -e "  $(T '请反馈以加入支持矩阵, 不会留半装的 daemon.' 'Please report so we add it; not leaving a half-installed daemon.')"
+    exit 1
+    ;;
+esac
+PKG_TMP="$(mktemp -d)/pkg-deps.zip"
+echo -e "${BLUE}→${NC} $(T "下载 daemon 运行依赖 (node-pty/sodium, ${PKG_PLAT}-${PKG_ARCH})..." "Downloading daemon runtime deps (node-pty/sodium, ${PKG_PLAT}-${PKG_ARCH})...")"
+if ! curl -fsSL "https://${DOMAIN}/dist/pkg-deps/pkg-deps-${PKG_PLAT}-${PKG_ARCH}.zip" -o "$PKG_TMP"; then
+  echo -e "${RED}✗${NC} $(T '运行依赖下载失败 (daemon 会 silent fail, attach 不上)' 'Runtime deps download failed (daemon will silent-fail on attach)')"
+  exit 1
+fi
+rm -rf "$INSTALL_DIR/node_modules"
+if ! unzip -q -o "$PKG_TMP" -d "$INSTALL_DIR"; then
+  echo -e "${RED}✗${NC} $(T '运行依赖解压失败' 'Runtime deps extract failed')"; exit 1
+fi
+rm -f "$PKG_TMP"
+# LOAD-SMOKE (PA 4d1999bb): 真 require 一遍 — 同时抓 文件缺失 + glibc 不匹配(老发行版/musl) + arch 错包.
+if ! NODE_PATH="$INSTALL_DIR/node_modules" node -e "require('node-pty');require('sodium-native')" 2>/dev/null; then
+  echo -e "${RED}✗${NC} $(T 'daemon 运行依赖 load-smoke 失败 (node-pty/sodium-native require 不起来)' 'Daemon runtime deps load-smoke failed (node-pty/sodium-native failed to require)')"
+  echo -e "  $(T '可能: glibc 过旧 / musl(Alpine) 不兼容 / arch 不匹配. 此环境暂不支持, 不留半装 daemon.' 'Likely: glibc too old / musl(Alpine) incompatible / arch mismatch. Environment not supported; not leaving a half-installed daemon.')"
+  exit 1
+fi
+echo -e "${GREEN}✓${NC} $(T "daemon 运行依赖已装 (load-smoke 通过)" "daemon runtime deps installed (load-smoke passed)")"
 
 # 创建 wrapper 脚本
 cat > "$BIN_DIR/aiterminal" <<EOF

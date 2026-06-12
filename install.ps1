@@ -191,6 +191,49 @@ try {
     exit 1
 }
 
+# 6b. 下载 runtime-external flock helper (DEPLOY CONTRACT, 见 build-bundle.js):
+# comms-store/task-store 锁内 shell out 跑 <bundle_dir>/../scripts/jsonl_locked_rmw.js
+# (= $InstallDir\scripts\, 因 bundle 在 $BinDir\). 缺它则 comms ack/done/update + task 写
+# 全 PERSIST_FAILED, 跨 session 消息卡 pending. esbuild 不 inline 它 (非 require).
+$scriptsDir = Join-Path $InstallDir 'scripts'
+New-Item -ItemType Directory -Force -Path $scriptsDir | Out-Null
+$helperUrl = "https://${Domain}/dist/scripts/jsonl_locked_rmw.js"
+$helperPath = Join-Path $scriptsDir 'jsonl_locked_rmw.js'
+try {
+    Invoke-WebRequest -UseBasicParsing -Uri $helperUrl -OutFile $helperPath
+} catch {
+    Write-Err (T "helper 下载失败 (comms 持久化会挂): $helperUrl" "Helper download failed (comms persistence will break): $helperUrl")
+    Write-Host (T "  错误: $_" "  Error: $_")
+    exit 1
+}
+
+# 6c. 下载 per-arch pkg-deps (DEPLOY CONTRACT, 见 build-bundle.js):
+# daemon bundle 把 node-pty/sodium-native/sodium-universal 设为 external, 运行时从
+# NODE_PATH=$PkgDir\node_modules 解析 (见下方 wrapper)。fresh install 若不 populate 这个目录,
+# daemon LIVE 但 pty.spawn 起不来 (node-pty 缺) → WSS attach silent fail (0.4.7 同 class 雷)。
+# per-arch zip 跟 psmux-win-<arch> 配对同集合。失败必须 exit1 fail loud, 不装一个 NODE_PATH 指空的 daemon。
+$pkgArch = if ([Environment]::Is64BitOperatingSystem) {
+    if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
+} else { 'x64' }
+$pkgDepsUrl = "https://${Domain}/dist/pkg-deps/pkg-deps-win-${pkgArch}.zip"
+$pkgDepsZip = Join-Path $env:TEMP "aiterminal-pkg-deps-$pkgArch.zip"
+Write-Info (T "下载 daemon 运行依赖 (node-pty/sodium, $pkgArch)..." "Downloading daemon runtime deps (node-pty/sodium, $pkgArch)...")
+try {
+    Invoke-WebRequest -UseBasicParsing -Uri $pkgDepsUrl -OutFile $pkgDepsZip
+    # zip 内根是 node_modules\, 解到 $PkgDir → $PkgDir\node_modules\ (= NODE_PATH)
+    if (Test-Path (Join-Path $PkgDir 'node_modules')) { Remove-Item (Join-Path $PkgDir 'node_modules') -Recurse -Force -ErrorAction SilentlyContinue }
+    Expand-Archive -Path $pkgDepsZip -DestinationPath $PkgDir -Force
+    Remove-Item $pkgDepsZip -Force -ErrorAction SilentlyContinue
+    # LOAD-SMOKE (PA 4d1999bb): 真 require 一遍 — 同时抓 文件缺失 + arch 错包 (比只查 package.json 强一档)。
+    $env:NODE_PATH = (Join-Path $PkgDir 'node_modules')
+    & node -e "require('node-pty');require('sodium-native')" 2>$null
+    if ($LASTEXITCODE -ne 0) { throw "load-smoke 失败: node-pty/sodium-native require 不起来 (文件缺失/arch 错包)" }
+} catch {
+    Write-Err (T "运行依赖下载/解压失败 (daemon 会 silent fail, attach 不上): $pkgDepsUrl" "Runtime deps download/extract failed (daemon will silent-fail on attach): $pkgDepsUrl")
+    Write-Host (T "  错误: $_" "  Error: $_")
+    exit 1
+}
+
 # 7. 创建 wrapper.cmd
 $wrapperPath = Join-Path $BinDir 'aiterminal.cmd'
 $wrapperContent = @"
@@ -203,13 +246,7 @@ node "$bundlePath" %*
 "@
 Set-Content -Path $wrapperPath -Value $wrapperContent -Encoding ASCII
 
-# 8. (removed) node-pty 装
-# 2026-05-15 daemon 重构: src/terminal/index.js 改为统一 re-export tmux, 不再使用 PtyBackend.
-# node-pty 依赖 + pty-backend.js / backend.js 整体删除, daemon bundle 不含 node-pty 引用 (verified).
-# 本步骤之前在 Windows 上需要 VS Build Tools + Python 装 native module, 大部分用户没装 → silent fail
-# 且 error 全吞 (2>$null | Out-Null) 让用户看不到原因. 移除后 install.ps1 装成功率 ↑.
-
-# 9. 加入 PATH (用户级)
+# 8. 加入 PATH (用户级)
 $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
 if ($userPath -notlike "*$BinDir*") {
     [Environment]::SetEnvironmentVariable('Path', "$userPath;$BinDir", 'User')
@@ -288,6 +325,8 @@ New-NetFirewallRule -DisplayName 'AI Terminal daemon (29877)' -Direction Inbound
 }
 
 # 13. 开机自启 daemon (用 cli.js 的 enable-autostart, 写 HKCU\Run + VBS 隐藏窗口)
+# 登录时 VBS 启动的是 `aiterminal.cmd watchdog` 常驻 supervisor: daemon 崩溃自动拉起,
+# 不是一次性 start。注册表/VBS 引用 bin\aiterminal.cmd 稳定路径, bundle 升级后自启保持。
 $autostartAns = Read-HostOrDefault (T "开机自启 daemon? (Y/n) — 推荐 Y, 这样 Windows 重启后无需手动启动" `
                             "Start daemon at boot? (Y/n) — recommended Y so you don't have to manually start after reboot") 'Y'
 if ($autostartAns -ne 'n' -and $autostartAns -ne 'N') {
