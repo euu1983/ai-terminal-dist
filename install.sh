@@ -98,12 +98,37 @@ if ! command -v node >/dev/null 2>&1; then
   echo -e "${RED}✗${NC} $(T '没有检测到 Node.js 18+' 'Node.js 18+ not found')"
   case $OS in
     macos)
-      echo -e "  ${BLUE}brew install node${NC}  $(T '或' 'or')  https://nodejs.org" ;;
+      # macOS: 提示 + 让用户选择自动安装 (对齐 tmux 自动装, 消除干净 Mac / App Store 审核员卡 Node 第一步).
+      # brew 优先 (PATH 稳定); 无 brew 用 nvm 用户空间装 (不需 sudo). 选 n 或装失败 → 退出给手动装法.
+      read -p "$(T '自动安装 Node.js 18+? (Y/n) ' 'Auto-install Node.js 18+? (Y/n) ')" -n 1 -r REPLY < /dev/tty || REPLY="y"
+      echo ""
+      if [[ "$REPLY" =~ ^[Nn]$ ]]; then
+        echo -e "  ${BLUE}brew install node${NC}  $(T '或' 'or')  https://nodejs.org"
+        exit 1
+      fi
+      if command -v brew >/dev/null 2>&1; then
+        echo -e "${YELLOW}!${NC} $(T '用 Homebrew 安装 Node...' 'Installing Node via Homebrew...')"
+        brew install node 2>&1 | tail -3 || true
+      else
+        echo -e "${YELLOW}!${NC} $(T '未装 Homebrew, 用 nvm 安装 Node (用户空间, 无需 sudo)...' 'No Homebrew; installing Node via nvm (user-space, no sudo)...')"
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash || true
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+        nvm install --lts >/dev/null 2>&1 || true
+      fi
+      # 装完重新检测: 成功继续, 失败给手动装法 + 退出
+      if ! command -v node >/dev/null 2>&1; then
+        echo -e "${RED}✗${NC} $(T 'Node 自动安装失败, 请手动装:' 'Node auto-install failed, install manually:') ${BLUE}brew install node${NC} $(T '或' 'or') https://nodejs.org"
+        exit 1
+      fi
+      echo -e "${GREEN}✓${NC} $(T 'Node.js 已安装' 'Node.js installed')"
+      ;;
     linux|wsl)
+      # 保持原样 (三生 mandate 2026-07-03: 只改 macOS 分支, linux/wsl 流程一字不动)
       echo -e "  Ubuntu/Debian: ${BLUE}curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt install -y nodejs${NC}"
-      echo -e "  $(T '或 nvm:       ' 'or nvm:        ') ${BLUE}curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash${NC}" ;;
+      echo -e "  $(T '或 nvm:       ' 'or nvm:        ') ${BLUE}curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash${NC}"
+      exit 1 ;;
   esac
-  exit 1
 fi
 NODE_VERSION=$(node -v | sed 's/v//')
 NODE_MAJOR=$(echo "$NODE_VERSION" | cut -d. -f1)
