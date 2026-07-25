@@ -1,6 +1,6 @@
 {
-  "latest_daemon": "0.5.45",
+  "latest_daemon": "0.5.47",
   "daemon_abi": "1.1.0",
   "native_bump": false,
-  "released_at": "2026-07-24T14:37:28.675Z"
+  "released_at": "2026-07-25T08:40:51.529Z"
 }
