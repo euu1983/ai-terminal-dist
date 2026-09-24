@@ -324,33 +324,42 @@ New-NetFirewallRule -DisplayName 'AI Terminal daemon (29877)' -Direction Inbound
     }
 }
 
-# 13. 开机自启 daemon (用 cli.js 的 enable-autostart, 写 HKCU\Run + VBS 隐藏窗口)
-# 登录时 VBS 启动的是 `aiterminal.cmd watchdog` 常驻 supervisor: daemon 崩溃自动拉起,
-# 不是一次性 start。注册表/VBS 引用 bin\aiterminal.cmd 稳定路径, bundle 升级后自启保持。
-$autostartAns = Read-HostOrDefault (T "开机自启 daemon? (Y/n) — 推荐 Y, 这样 Windows 重启后无需手动启动" `
-                            "Start daemon at boot? (Y/n) — recommended Y so you don't have to manually start after reboot") 'Y'
-if ($autostartAns -ne 'n' -and $autostartAns -ne 'N') {
-    try {
-        & $wrapperPath enable-autostart
-    } catch {
-        Write-Warn (T "开机自启设置失败: $_" "Autostart setup failed: $_")
+# 13. 本机 daemon 已被 `aiterminal service off` 关闭 (~/.aiterminal/service.disabled) → 只安装:
+#     不配开机自启、不启动 daemon、不打开 tmux (psmux 也占资源)。开启走 `aiterminal service on` 或 Desktop 设置。
+#     (0.5.53 起 start / watchdog 本身也认这个标记, 但重装写回自启注册表会破坏"关闭时不配置自启"的语义; codex 复核)
+$serviceDisabled = Test-Path -LiteralPath (Join-Path $InstallDir 'service.disabled')
+if ($serviceDisabled) {
+    Write-Warn (T "本机 daemon 已关闭 (service.disabled): 只安装, 不配开机自启、不启动 daemon、不打开 tmux。需要时运行 aiterminal service on, 或在 Desktop 设置里开启" `
+                 "This machine's daemon is switched off (service.disabled): installed only - no autostart, daemon not started, no tmux window. Turn it on with 'aiterminal service on' or in Desktop settings")
+} else {
+    # 13. 开机自启 daemon (用 cli.js 的 enable-autostart, 写 HKCU\Run + VBS 隐藏窗口)
+    # 登录时 VBS 启动的是 `aiterminal.cmd watchdog` 常驻 supervisor: daemon 崩溃自动拉起,
+    # 不是一次性 start。注册表/VBS 引用 bin\aiterminal.cmd 稳定路径, bundle 升级后自启保持。
+    $autostartAns = Read-HostOrDefault (T "开机自启 daemon? (Y/n) — 推荐 Y, 这样 Windows 重启后无需手动启动" `
+                                "Start daemon at boot? (Y/n) — recommended Y so you don't have to manually start after reboot") 'Y'
+    if ($autostartAns -ne 'n' -and $autostartAns -ne 'N') {
+        try {
+            & $wrapperPath enable-autostart
+        } catch {
+            Write-Warn (T "开机自启设置失败: $_" "Autostart setup failed: $_")
+        }
     }
-}
 
-# 13. 自动启动 daemon
-$launch = Read-HostOrDefault (T "现在启动 daemon? (Y/n)" "Start daemon now? (Y/n)") 'Y'
-if ($launch -ne 'n' -and $launch -ne 'N') {
-    & $wrapperPath
-}
+    # 13. 自动启动 daemon
+    $launch = Read-HostOrDefault (T "现在启动 daemon? (Y/n)" "Start daemon now? (Y/n)") 'Y'
+    if ($launch -ne 'n' -and $launch -ne 'N') {
+        & $wrapperPath
+    }
 
-# 13. 立刻打开 tmux 窗口让用户开始用
-$openNow = Read-HostOrDefault (T "现在直接打开 tmux 让你开始用? (Y/n)" "Open a tmux window now to get started? (Y/n)") 'Y'
-if ($openNow -ne 'n' -and $openNow -ne 'N') {
-    Start-Process -FilePath $tmuxLauncher
-    Write-Host ""
-    Write-Host (T "  ✓ tmux 窗口已打开,在里面敲 " "  ✓ tmux window opened. Type ") -NoNewline
-    Write-Host "claude" -ForegroundColor Blue -NoNewline
-    Write-Host (T " (或其他 AI 工具) 即可开始用" " (or any AI CLI) inside to start")
-    Write-Host (T "  ✓ 手机扫码完成后会自动看到这个 session" `
-                 "  ✓ Once paired, your phone will see this session automatically")
+    # 13. 立刻打开 tmux 窗口让用户开始用
+    $openNow = Read-HostOrDefault (T "现在直接打开 tmux 让你开始用? (Y/n)" "Open a tmux window now to get started? (Y/n)") 'Y'
+    if ($openNow -ne 'n' -and $openNow -ne 'N') {
+        Start-Process -FilePath $tmuxLauncher
+        Write-Host ""
+        Write-Host (T "  ✓ tmux 窗口已打开,在里面敲 " "  ✓ tmux window opened. Type ") -NoNewline
+        Write-Host "claude" -ForegroundColor Blue -NoNewline
+        Write-Host (T " (或其他 AI 工具) 即可开始用" " (or any AI CLI) inside to start")
+        Write-Host (T "  ✓ 手机扫码完成后会自动看到这个 session" `
+                     "  ✓ Once paired, your phone will see this session automatically")
+    }
 }
