@@ -25,6 +25,11 @@
 //                                                        本脚本不另写一份"仍需投递"判据); 按 created_at 的 UTC 年月追加到 <archive_dir>/<YYYY-MM>.jsonl
 //                                                        (按 id 去重) 并 fsync, 然后照常原子替换主文件。崩在两步之间: 主文件不变, 归档可能多一份 → 下次去重。
 // 退出码: 0 ok / 3 NOT_FOUND / 4 REVISION_CONFLICT / 5 BAD_OP / 6 IO。结果 JSON 打 stdout。
+//
+// 🔴 兼容约定 (0.5.56, sandbox 873418f5): 操作【只加不改不删】—— 已发布过的 op 名、payload 字段、结果字段、退出码语义都不许改、不许删。
+//   原因: 本脚本不打进安装包, 由安装脚本 / 自动更新单独下发 (src/auto-update.js 先换 helper 再换安装包), 所以任何时刻都可能是
+//   "新 helper + 旧 daemon"; 只加不改才能保证旧 daemon 发来的每一种操作照旧能执行。
+//   守护: test/helper_compat_test.js (历史上发布过的每个 op 固定输入 → 固定结果; 并核 src 里用到的 op 都被支持)。
 
 const fs = require('fs');
 
