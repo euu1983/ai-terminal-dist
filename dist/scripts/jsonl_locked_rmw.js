@@ -20,6 +20,10 @@
 //                                                        否则 append. 原子去重 (comms-P1 防 hook 双触秒级重复, 避 check-then-append TOCTOU)
 //   update  payload={id, mutation, expectedRevision?}  → 找 id, 校验 revision, merge mutation, revision+1
 //   prune   payload={now_ms}                           → 删 ripe tombstone (status∈cancelled/deleted && cleanup_after<now)
+//   archive payload={ids:{<id>:<revision>}, archive_dir} → 0.5.55 comms 旧消息归档 (方案 docs/design/2026-09-27-comms-archive-plan.md):
+//                                                        只搬 ids 里列出、且 revision 与调用方快照一致的记录 (挑哪些由 CommsStore 按唯一判据决定,
+//                                                        本脚本不另写一份"仍需投递"判据); 按 created_at 的 UTC 年月追加到 <archive_dir>/<YYYY-MM>.jsonl
+//                                                        (按 id 去重) 并 fsync, 然后照常原子替换主文件。崩在两步之间: 主文件不变, 归档可能多一份 → 下次去重。
 // 退出码: 0 ok / 3 NOT_FOUND / 4 REVISION_CONFLICT / 5 BAD_OP / 6 IO。结果 JSON 打 stdout。
 
 const fs = require('fs');
@@ -101,6 +105,46 @@ function main() {
     });
     records = kept;
     result = { ok: true, op, pruned };
+  } else if (op === 'archive') {
+    const want = (payload && payload.ids) || {};
+    const dir = payload && payload.archive_dir;
+    if (!dir) { process.stdout.write(JSON.stringify({ ok: false, code: 'BAD_OP', error: 'archive: archive_dir 必填' })); process.exit(5); }
+    const moving = [], kept = [];
+    for (const r of records) {
+      if (r && Object.prototype.hasOwnProperty.call(want, r.id) && (r.revision || 0) === want[r.id]) moving.push(r);
+      else kept.push(r);   // 不在清单里, 或快照之后被改过 (revision 变了) → 留下, 下次再判
+    }
+    let appended = 0, dupSkipped = 0;
+    if (moving.length) {
+      try {
+        const path = require('path');
+        fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+        const byMonth = new Map();
+        for (const r of moving) {
+          const d = new Date(Number(r.created_at) || 0);
+          const k = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+          if (!byMonth.has(k)) byMonth.set(k, []);
+          byMonth.get(k).push(r);
+        }
+        for (const [k, list] of byMonth) {
+          const f = path.join(dir, `${k}.jsonl`);
+          const have = new Set(readAll(f).map(x => x && x.id));   // 按 id 去重 (上次崩在追加之后、替换之前留下的)
+          const lines = list.filter(r => !have.has(r.id));
+          dupSkipped += list.length - lines.length;
+          if (!lines.length) continue;
+          const fd = fs.openSync(f, 'a', 0o600);
+          try { fs.writeSync(fd, lines.map(r => JSON.stringify(r)).join('\n') + '\n'); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+          appended += lines.length;
+        }
+        try { const dfd = fs.openSync(dir, 'r'); fs.fsyncSync(dfd); fs.closeSync(dfd); } catch (_) {}
+      } catch (e) {
+        // 归档没写成 → 不动主文件 (下面的原子替换不执行)
+        process.stdout.write(JSON.stringify({ ok: false, code: 'IO', error: 'archive: ' + e.message }));
+        process.exit(6);
+      }
+    }
+    records = kept;
+    result = { ok: true, op, archived: moving.length, appended, dup_skipped: dupSkipped, kept: kept.length };
   } else {
     process.stdout.write(JSON.stringify({ ok: false, code: 'BAD_OP', error: `unknown op '${op}'` }));
     process.exit(5);
